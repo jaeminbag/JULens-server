@@ -1,5 +1,6 @@
 package com.julensserver.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,10 +16,16 @@ import com.julensserver.dto.auth.*;
 public class AuthController {
     private final AuthService authService;
 
-    public AuthController(AuthService authService, AuthService authService_1){
+    public AuthController(AuthService authService){
         this.authService=authService;
     }
 
+    @PostMapping("/signup")
+    public ApiResponse<SignUpResponse> signUp(@Valid @RequestBody SignUpRequest signUpRequest){
+        SignUpResponse signUpResponse = authService.signUp(signUpRequest);
+
+        return ApiResponse.success("회원가입에 성공했습니다.", signUpResponse);
+    }
 
 
 

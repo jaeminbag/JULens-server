@@ -1,5 +1,8 @@
 package com.julensserver.service;
 
+import com.julensserver.domain.User;
+import com.julensserver.exception.BusinessException;
+import com.julensserver.exception.ErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,23 @@ public class AuthService {
         this.passwordEncoder=passwordEncoder;
     }
 
+    public SignUpResponse signUp(SignUpRequest signUpRequest){
+        if(userRepository.existsByEmail(signUpRequest.getEmail())){
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        String encodedPassword = passwordEncoder.encode(signUpRequest.getPassword());
+
+        User user = new User(signUpRequest.getEmail(), encodedPassword, signUpRequest.getNickname());
+
+        User savedUser = userRepository.save(user);
+
+        return new SignUpResponse(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getNickname()
+        );
+    }
 
 
 }
