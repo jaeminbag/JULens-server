@@ -27,6 +27,13 @@ public class AuthController {
         return ApiResponse.success("회원가입에 성공했습니다.", signUpResponse);
     }
 
+    @PostMapping("/login")
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest){
+        LoginResponse loginResponse = authService.login(loginRequest);
+
+        return ApiResponse.success("로그인에 성공했습니다.", loginResponse);
+    }
+
 
 
 
