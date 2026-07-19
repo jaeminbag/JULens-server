@@ -52,12 +52,21 @@ public class PostController {
     }
 
     @PutMapping("/{postId}")
-    public ApiResponse<PostResponse> updatePostById(Long postId, @RequestBody @Valid PostUpdateRequest postUpdateRequest){
+    public ApiResponse<PostResponse> updatePostById(@PathVariable Long postId, @RequestBody @Valid PostUpdateRequest postUpdateRequest){
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         PostResponse postResponse = postService.updatePostById(postId,userId,postUpdateRequest);
 
         return ApiResponse.success("게시물 수정에 성공했습니다.", postResponse);
+    }
+
+    @DeleteMapping("/{postId}")
+    public ApiResponse<Void> deletePostById(@PathVariable Long postId){
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        postService.deletePostById(postId,userId);
+
+        return ApiResponse.success("게시물 삭제에 성공했습니다.");
     }
 
 }
