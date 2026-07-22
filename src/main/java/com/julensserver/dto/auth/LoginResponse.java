@@ -1,5 +1,12 @@
 package com.julensserver.dto.auth;
 
+import com.julensserver.domain.User;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class LoginResponse {
     private String accessToken;
     private String tokenType;
@@ -7,31 +14,13 @@ public class LoginResponse {
     private String email;
     private String nickname;
 
-    public LoginResponse(String accessToken, String tokenType, Long userId, String email, String nickname){
-        this.accessToken=accessToken;
-        this.tokenType=tokenType;
-        this.userId=userId;
-        this.email=email;
-        this.nickname=nickname;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public String getTokenType() {
-        return tokenType;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getNickname() {
-        return nickname;
+    public static LoginResponse of(String accessToken, User user){
+        return new LoginResponse(
+                accessToken,
+                "Bearer",
+                user.getId(),
+                user.getEmail(),
+                user.getNickname()
+        );
     }
 }

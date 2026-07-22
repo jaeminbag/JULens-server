@@ -36,11 +36,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        return new SignUpResponse(
-                savedUser.getId(),
-                savedUser.getEmail(),
-                savedUser.getNickname()
-        );
+        return SignUpResponse.from(savedUser);
     }
 
     public LoginResponse login(LoginRequest loginRequest){
@@ -53,7 +49,7 @@ public class AuthService {
 
         String token = jwtProvider.createAccessToken(user.getId(), user.getEmail());
 
-        return new LoginResponse(token, "Bearer", user.getId(), user.getEmail(), user.getNickname());
+        return LoginResponse.of(token,user);
     }
 
 

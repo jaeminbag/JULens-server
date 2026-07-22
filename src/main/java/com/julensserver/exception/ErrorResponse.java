@@ -1,7 +1,13 @@
 package com.julensserver.exception;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 import java.util.Map;
 
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ErrorResponse {
 
     private boolean success;
@@ -10,13 +16,6 @@ public class ErrorResponse {
     private String message;
     private Map<String ,String > errors;
 
-    private ErrorResponse(boolean success, int status, String code, String message, Map<String ,String > errors){
-        this.success=success;
-        this.status=status;
-        this.code=code;
-        this.message=message;
-        this.errors=errors;
-    }
 
     public static ErrorResponse from(ErrorCode errorCode){
         return new ErrorResponse(
@@ -48,24 +47,5 @@ public class ErrorResponse {
         );
     }
 
-    public boolean isSuccess() {
-        return success;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getMessage(){
-        return message;
-    }
-
-    public Map<String, String> getErrors() {
-        return errors;
-    }
 
 }
