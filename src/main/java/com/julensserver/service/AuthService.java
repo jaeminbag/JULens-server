@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.julensserver.repository.UserRepository;
 import com.julensserver.dto.auth.SignUpRequest;
 import com.julensserver.dto.auth.SignUpResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -25,6 +26,7 @@ public class AuthService {
         this.jwtProvider=jwtProvider;
     }
 
+    @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest){
         if(userRepository.existsByEmail(signUpRequest.getEmail())){
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
@@ -39,6 +41,7 @@ public class AuthService {
         return SignUpResponse.from(savedUser);
     }
 
+    @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest loginRequest){
         User user = userRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(()-> new BusinessException(ErrorCode.INVALID_LOGIN));

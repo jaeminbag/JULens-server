@@ -11,7 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,27 +43,21 @@ public class PostController {
     }
 
     @PostMapping
-    public ApiResponse<PostResponse> createPost(@RequestBody @Valid PostCreateRequest postCreateRequest){
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
+    public ApiResponse<PostResponse> createPost(@AuthenticationPrincipal Long userId, @RequestBody @Valid PostCreateRequest postCreateRequest){
         PostResponse postResponse = postService.createPost(userId, postCreateRequest);
 
         return ApiResponse.success("게시물 작성에 성공했습니다.", postResponse);
     }
 
     @PutMapping("/{postId}")
-    public ApiResponse<PostResponse> updatePostById(@PathVariable Long postId, @RequestBody @Valid PostUpdateRequest postUpdateRequest){
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
+    public ApiResponse<PostResponse> updatePostById(@PathVariable Long postId, @AuthenticationPrincipal Long userId, @RequestBody @Valid PostUpdateRequest postUpdateRequest){
         PostResponse postResponse = postService.updatePostById(postId,userId,postUpdateRequest);
 
         return ApiResponse.success("게시물 수정에 성공했습니다.", postResponse);
     }
 
     @DeleteMapping("/{postId}")
-    public ApiResponse<Void> deletePostById(@PathVariable Long postId){
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
+    public ApiResponse<Void> deletePostById(@PathVariable Long postId, @AuthenticationPrincipal Long userId){
         postService.deletePostById(postId,userId);
 
         return ApiResponse.success("게시물 삭제에 성공했습니다.");

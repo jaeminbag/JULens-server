@@ -26,6 +26,7 @@ public class PostService {
         this.userRepository=userRepository;
     }
 
+    @Transactional(readOnly = true)
     public PostResponse getPostById(Long postId){
         Post post = postRepository.findById(postId)
                 .orElseThrow(()->new BusinessException(ErrorCode.POST_NOT_FOUND));
