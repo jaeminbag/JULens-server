@@ -1,7 +1,6 @@
 package com.julensserver.dto.comment;
 
 import com.julensserver.domain.Comment;
-import com.julensserver.domain.User;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

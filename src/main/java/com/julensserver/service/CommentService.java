@@ -5,6 +5,7 @@ import com.julensserver.domain.Post;
 import com.julensserver.domain.User;
 import com.julensserver.dto.comment.CommentCreateRequest;
 import com.julensserver.dto.comment.CommentResponse;
+import com.julensserver.dto.comment.CommentUpdateRequest;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
 import com.julensserver.repository.CommentRepository;
@@ -28,7 +29,7 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponse createComment(Long postId, Long userId, CommentCreateRequest commentCreateRequest){
+    public CommentResponse createCommentByPostId(Long postId, Long userId, CommentCreateRequest commentCreateRequest){
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
@@ -44,13 +45,40 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public List<CommentResponse> getCommentByPostId(Long postId){
-        Post post = postRepository.findById(postId)
-                .orElseThrow(()-> new BusinessException(ErrorCode.POST_NOT_FOUND));
-
+        if(!postRepository.existsById(postId)){
+                throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
         return commentRepository.findAllByPost_IdOrderByCreatedAtAsc(postId)
                 .stream()
                 .map(CommentResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public CommentResponse updateCommentById(Long commentId, Long userId, CommentUpdateRequest commentUpdateRequest){
+        Comment comment = commentRepository.findById(commentId)
+                            .orElseThrow(()-> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+        
+        if(!comment.getUser().getId().equals(userId)){
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+        
+        comment.update(commentUpdateRequest.getContent());
+
+        return CommentResponse.from(comment);
+    }
+
+    @Transactional
+    public void deleteCommentById(Long commentId, Long userId){
+        Comment comment = commentRepository.findById(commentId)
+                            .orElseThrow(()-> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if(!comment.getUser().getId().equals(userId)){
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        commentRepository.delete(comment);
+        
     }
 
 }
