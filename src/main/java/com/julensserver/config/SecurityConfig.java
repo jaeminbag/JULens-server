@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .httpBasic(httpBasic->httpBasic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/signup", "auth/login").permitAll()
+                        .requestMatchers("/auth/signup", "/auth/login").permitAll()
                         .requestMatchers("/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"

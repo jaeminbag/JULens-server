@@ -59,7 +59,7 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                             .orElseThrow(()-> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
         
-        if(!comment.getUser().getId().equals(userId)){
+        if(!comment.isWrittenBy(userId)){
             throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
         
@@ -73,7 +73,7 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                             .orElseThrow(()-> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
-        if(!comment.getUser().getId().equals(userId)){
+        if(!comment.isWrittenBy(userId)){
             throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 

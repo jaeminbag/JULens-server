@@ -4,7 +4,6 @@ import com.julensserver.dto.comment.CommentCreateRequest;
 import com.julensserver.dto.comment.CommentResponse;
 import com.julensserver.dto.comment.CommentUpdateRequest;
 import com.julensserver.dto.common.ApiResponse;
-import com.julensserver.dto.post.PostUpdateRequest;
 import com.julensserver.service.CommentService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
