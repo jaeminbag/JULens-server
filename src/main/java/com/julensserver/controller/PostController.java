@@ -63,5 +63,13 @@ public class PostController {
         return ApiResponse.success("게시물 삭제에 성공했습니다.");
     }
 
+    @GetMapping("/popular")
+    public ApiResponse<Page<PostListResponse>> getPopularPosts(
+            @PageableDefault(size = 20) Pageable pageable
+    ){
+        Page<PostListResponse> postListResponses = postService.getPopularPosts(pageable);
+        return ApiResponse.success("인기 게시물 조회에 성공했습니다.", postListResponses);
+    }
+
 }
 

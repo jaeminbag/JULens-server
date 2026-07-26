@@ -36,8 +36,9 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public Page<PostListResponse> getPosts(Pageable pageable){
-        return postRepository.findAll(pageable)
-                .map(PostListResponse::from);
+        return postRepository.findAllWithLikeCount(pageable)
+                .map(p->PostListResponse.from(p.getPost(),p.getLikeCount()));
+
     }
 
     @Transactional
@@ -76,5 +77,11 @@ public class PostService {
         }
 
         postRepository.delete(post);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> getPopularPosts(Pageable pageable){
+        return postRepository.findPopularPosts(pageable)
+                .map(p->PostListResponse.from(p.getPost(), p.getLikeCount()));
     }
 }
