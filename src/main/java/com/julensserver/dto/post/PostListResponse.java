@@ -20,8 +20,9 @@ public class PostListResponse {
     private String authorNickname;
     private LocalDateTime createdAt;
     private Long likeCount;
+    private Long commentCount;
 
-    public static PostListResponse from(Post post, Long likeCount) {
+    public static PostListResponse from(Post post, Long likeCount, Long commentCount) {
         String contentPreview = createContentPreview(post.getContent());
 
         return new PostListResponse(
@@ -31,7 +32,8 @@ public class PostListResponse {
                 post.getUser().getId(),
                 post.getUser().getNickname(),
                 post.getCreatedAt(),
-                likeCount
+                likeCount,
+                commentCount
         );
     }
 

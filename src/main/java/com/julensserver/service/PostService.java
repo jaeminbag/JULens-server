@@ -8,6 +8,7 @@ import com.julensserver.dto.post.PostResponse;
 import com.julensserver.dto.post.PostUpdateRequest;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
+import com.julensserver.repository.CommentRepository;
 import com.julensserver.repository.PostLikeRepository;
 import com.julensserver.repository.PostRepository;
 import com.julensserver.repository.UserRepository;
@@ -23,6 +24,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostLikeRepository postLikeRepository;
+    private final CommentRepository commentRepository;
 
 
     @Transactional(readOnly = true)
@@ -36,7 +38,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public Page<PostListResponse> getPosts(Pageable pageable){
         return postRepository.findAllWithLikeCount(pageable)
-                .map(p->PostListResponse.from(p.getPost(),p.getLikeCount()));
+                .map(p->PostListResponse.from(p.getPost(),p.getLikeCount(), p.getCommentCount()));
 
     }
 
@@ -74,13 +76,15 @@ public class PostService {
         if(!post.isWrittenBy(userId)){
             throw new BusinessException(ErrorCode.POST_ACCESS_DENIED);
         }
-
+        
+        commentRepository.deleteAllByPost_Id(postId);
+        postLikeRepository.deleteAllByPost_Id(postId);
         postRepository.delete(post);
     }
 
     @Transactional(readOnly = true)
     public Page<PostListResponse> getPopularPosts(Pageable pageable){
         return postRepository.findPopularPosts(pageable)
-                .map(p->PostListResponse.from(p.getPost(), p.getLikeCount()));
+                .map(p->PostListResponse.from(p.getPost(), p.getLikeCount(), p.getCommentCount()));
     }
 }
