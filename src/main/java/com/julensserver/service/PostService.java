@@ -8,30 +8,29 @@ import com.julensserver.dto.post.PostResponse;
 import com.julensserver.dto.post.PostUpdateRequest;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
+import com.julensserver.repository.PostLikeRepository;
 import com.julensserver.repository.PostRepository;
 import com.julensserver.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+@RequiredArgsConstructor
 @Service
 public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
 
-    public PostService(PostRepository postRepository, UserRepository userRepository){
-        this.postRepository=postRepository;
-        this.userRepository=userRepository;
-    }
 
     @Transactional(readOnly = true)
-    public PostResponse getPostById(Long postId){
+    public PostResponse getPostById(Long postId, Long userId){
         Post post = postRepository.findById(postId)
                 .orElseThrow(()->new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        return PostResponse.from(post);
+        return PostResponse.from(post, postLikeRepository.countByPost_Id(postId), postLikeRepository.existsByPost_IdAndUser_Id(postId, userId));
     }
 
     @Transactional(readOnly = true)
@@ -49,8 +48,8 @@ public class PostService {
         Post post = new Post(user, postCreateRequest.getTitle(), postCreateRequest.getContent());
 
         Post savedPost = postRepository.save(post);
-
-        return PostResponse.from(savedPost);
+        Long postId = savedPost.getId();
+        return PostResponse.from(savedPost, postLikeRepository.countByPost_Id(postId), postLikeRepository.existsByPost_IdAndUser_Id(postId,userId));
     }
 
     @Transactional
@@ -64,7 +63,7 @@ public class PostService {
 
         post.update(postUpdateRequest.getTitle(), postUpdateRequest.getContent());
 
-        return PostResponse.from(post);
+        return PostResponse.from(post, postLikeRepository.countByPost_Id(postId), postLikeRepository.existsByPost_IdAndUser_Id(postId,userId));
     }
 
     @Transactional

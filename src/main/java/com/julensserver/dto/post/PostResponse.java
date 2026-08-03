@@ -15,16 +15,20 @@ public class PostResponse {
     private String title;
     private String content;
     private String nickname;
+    private long likeCount;
+    private boolean liked;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static PostResponse from(Post post) {
+    public static PostResponse from(Post post, long likeCount, boolean liked) {
         return new PostResponse(
                 post.getId(),
                 post.getUser().getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.getUser().getNickname(),
+                likeCount,
+                liked,
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );

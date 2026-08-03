@@ -24,8 +24,8 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<PostResponse> getPostById(@PathVariable Long id){
-        PostResponse postResponse = postService.getPostById(id);
+    public ApiResponse<PostResponse> getPostById(@PathVariable Long id, @AuthenticationPrincipal Long userId){
+        PostResponse postResponse = postService.getPostById(id, userId);
 
         return ApiResponse.success("게시물 조회에 성공했습니다.", postResponse);
     }
