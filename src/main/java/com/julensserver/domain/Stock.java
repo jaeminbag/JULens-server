@@ -21,6 +21,9 @@ public class Stock {
     @Column(nullable = false, length = 200)
     private String companyName;
 
+    @Column(nullable = false, length = 200)
+    private String companyNameKr;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Exchange exchange;
