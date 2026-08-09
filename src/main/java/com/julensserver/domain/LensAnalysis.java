@@ -17,14 +17,13 @@ public class LensAnalysis {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "batch_id", nullable = false)
+    private LensAnalysisBatch batch;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stock_id", nullable = false)
     private Stock stock;
-
-    //종목 구분
-    @Enumerated(EnumType.STRING)
-    @Column(name = "market_session", nullable = false, length = 30)
-    private MarketSession marketSession;
 
     //종목 현재 주가
     @Column(name = "current_price", nullable = false, precision = 15, scale = 4)

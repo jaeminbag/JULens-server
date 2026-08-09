@@ -68,7 +68,7 @@ public class LensAnalysisResponse {
                 lensAnalysis.getStock().getCurrency(),
                 lensAnalysis.getStock().getSector(),
 
-                lensAnalysis.getMarketSession(),
+                lensAnalysis.getBatch().getMarketSession(),
 
                 lensAnalysis.getCurrentPrice(),
                 lensAnalysis.getChangeRate(),
