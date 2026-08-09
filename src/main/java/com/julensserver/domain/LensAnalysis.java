@@ -68,4 +68,65 @@ public class LensAnalysis {
     //분석 완료 시각
     @Column(name = "analyzed_at", nullable = false)
     private LocalDateTime analyzedAt;
+
+
+    private LensAnalysis(
+            LensAnalysisBatch batch,
+            Stock stock,
+            BigDecimal currentPrice,
+            BigDecimal changeRate,
+            Long volume,
+            BigDecimal tradingValue,
+            Integer newsScore,
+            Integer movementScore,
+            Integer volumeScore,
+            Integer riskScore,
+            Integer totalScore,
+            LensLabel label
+    ) {
+        this.batch = batch;
+        this.stock = stock;
+        this.currentPrice = currentPrice;
+        this.changeRate = changeRate;
+        this.volume = volume;
+        this.tradingValue = tradingValue;
+        this.newsScore = newsScore;
+        this.movementScore = movementScore;
+        this.volumeScore = volumeScore;
+        this.riskScore = riskScore;
+        this.totalScore = totalScore;
+        this.label = label;
+        this.analyzedAt = LocalDateTime.now();
+    }
+
+
+    public static LensAnalysis create(
+            LensAnalysisBatch batch,
+            Stock stock,
+            BigDecimal currentPrice,
+            BigDecimal changeRate,
+            Long volume,
+            BigDecimal tradingValue,
+            Integer newsScore,
+            Integer movementScore,
+            Integer volumeScore,
+            Integer riskScore,
+            Integer totalScore,
+            LensLabel label
+    ) {
+        return new LensAnalysis(
+                batch,
+                stock,
+                currentPrice,
+                changeRate,
+                volume,
+                tradingValue,
+                newsScore,
+                movementScore,
+                volumeScore,
+                riskScore,
+                totalScore,
+                label
+        );
+    }
 }

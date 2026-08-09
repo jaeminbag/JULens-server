@@ -42,14 +42,24 @@ public class Stock {
     public Stock(
             String ticker,
             String companyName,
+            String companyNameKr,
             Exchange exchange,
             Currency currency,
             String sector
     ){
         this.ticker=ticker;
         this.companyName=companyName;
+        this.companyNameKr=companyNameKr;
         this.exchange=exchange;
         this.currency=currency;
         this.sector=sector;
+    }
+
+    public void activate(){
+        this.active=true;
+    }
+
+    public void deactivate(){
+        this.active=false;
     }
 }
