@@ -7,15 +7,18 @@ import com.julensserver.domain.MarketSession;
 import com.julensserver.domain.Stock;
 import com.julensserver.dto.lens.LensAnalysisResponse;
 import com.julensserver.dto.lens.LensAnalysisResult;
+import com.julensserver.dto.lens.LensAnalysisSortBy;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
 import com.julensserver.repository.LensAnalysisBatchRepository;
 import com.julensserver.repository.LensAnalysisRepository;
 import com.julensserver.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -53,6 +56,30 @@ public class LensAnalysisService {
     }
 
     public List<LensAnalysisResponse> getLatestAnalyses() {
+        return getLatestAnalyses(
+                null,
+                null,
+                null,
+                LensAnalysisSortBy.TOTAL_SCORE,
+                Sort.Direction.DESC
+        );
+    }
+
+    public List<LensAnalysisResponse> getLatestAnalyses(
+            String keyword,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            LensAnalysisSortBy sortBy,
+            Sort.Direction direction
+    ) {
+        if (minPrice != null && maxPrice != null
+                && minPrice.compareTo(maxPrice) > 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "최소 가격은 최대 가격보다 클 수 없습니다."
+            );
+        }
+
         LensAnalysisBatch latestBatch =
                 lensAnalysisBatchRepository
                         .findFirstByStatusOrderByCompletedAtDesc(
@@ -64,8 +91,19 @@ public class LensAnalysisService {
                                 )
                         );
 
+        String normalizedKeyword = keyword == null || keyword.isBlank()
+                ? null
+                : keyword.trim();
+        Sort sort = Sort.by(direction, sortBy.getProperty());
+
         return lensAnalysisRepository
-                .findAllByBatchOrderByTotalScoreDesc(latestBatch)
+                .searchLatest(
+                        latestBatch,
+                        normalizedKeyword,
+                        minPrice,
+                        maxPrice,
+                        sort
+                )
                 .stream()
                 .map(LensAnalysisResponse::from)
                 .toList();
