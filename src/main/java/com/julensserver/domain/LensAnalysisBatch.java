@@ -48,6 +48,7 @@ public class LensAnalysisBatch {
 
     public void fail(){
         this.status=LensBatchStatus.FAILED;
+        this.completedAt=LocalDateTime.now();
     }
 
 }

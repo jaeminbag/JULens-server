@@ -22,7 +22,10 @@ public enum ErrorCode {
     STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "STOCK_NOT_FOUND", "종목을 찾을 수 없습니다."),
     USER_STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_STOCK_NOT_FOUND", "관심종목에서 해당 종목을 찾을 수 없습니다."),
     USER_STOCK_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_STOCK_ALREADY_EXISTS", "이미 관심종목에 등록된 종목입니다."),
-    LENS_ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "LENS_ANALYSIS_NOT_FOUND", "완료된 분석 결과를 찾을 수 없습니다.");
+    LENS_ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "LENS_ANALYSIS_NOT_FOUND", "완료된 분석 결과를 찾을 수 없습니다."),
+    LENS_ANALYSIS_BATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "LENS_ANALYSIS_BATCH_NOT_FOUND", "분석 배치를 찾을 수 없습니다."),
+    LENS_ANALYSIS_ALREADY_RUNNING(HttpStatus.CONFLICT, "LENS_ANALYSIS_ALREADY_RUNNING", "Lens 분석이 이미 실행 중입니다."),
+    EXTERNAL_DATA_PROVIDER_ERROR(HttpStatus.BAD_GATEWAY, "EXTERNAL_DATA_PROVIDER_ERROR", "외부 주식 데이터 조회에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;
