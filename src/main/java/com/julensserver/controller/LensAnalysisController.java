@@ -1,5 +1,10 @@
 package com.julensserver.controller;
 
+import com.julensserver.domain.MarketSession;
+import com.julensserver.dto.common.ApiResponse;
+import org.springframework.context.annotation.Profile;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.julensserver.dto.common.ApiResponse;
 import com.julensserver.dto.lens.LensAnalysisResponse;
 import com.julensserver.service.LensAnalysisService;
@@ -10,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Profile("mock")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/lens-analyses")
@@ -26,6 +32,17 @@ public class LensAnalysisController {
         return ApiResponse.success(
                 "최신 종목 분석 결과 조회에 성공했습니다.",
                 lensAnalysisResponses
+        );
+    }
+
+    @PostMapping("/run")
+    public ApiResponse<Void> runAnalysis(
+            @RequestParam MarketSession marketSession
+    ) {
+        lensAnalysisService.runAnalysis(marketSession);
+
+        return ApiResponse.success(
+                "Lens 분석이 완료되었습니다."
         );
     }
 }
