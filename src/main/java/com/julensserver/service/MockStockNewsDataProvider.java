@@ -30,12 +30,14 @@ public class MockStockNewsDataProvider
                         "Company raises guidance after strong quarter",
                         "Revenue growth exceeded market expectations.",
                         "Mock Financial News",
+                        "https://mock.julens.local/news/strong-quarter",
                         now.minusHours(2)
                 ),
                 new StockNewsData(
                         "Company announces strategic partnership",
                         "The partnership is expected to support future growth.",
                         "Mock Business News",
+                        "https://mock.julens.local/news/partnership",
                         now.minusHours(5)
                 )
         );

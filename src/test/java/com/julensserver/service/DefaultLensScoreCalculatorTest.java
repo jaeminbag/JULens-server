@@ -32,12 +32,14 @@ class DefaultLensScoreCalculatorTest {
                         "Company raises guidance after strong quarter",
                         "Revenue growth exceeded market expectations.",
                         "Mock Financial News",
+                        "https://example.com/strong-quarter",
                         OffsetDateTime.now().minusHours(2)
                 ),
                 new StockNewsData(
                         "Company announces strategic partnership",
                         "The partnership is expected to support future growth.",
                         "Mock Business News",
+                        "https://example.com/partnership",
                         OffsetDateTime.now().minusHours(5)
                 )
         );
@@ -71,6 +73,7 @@ class DefaultLensScoreCalculatorTest {
                         "Company faces possible delisting",
                         "The exchange issued a delisting warning.",
                         "Mock Financial News",
+                        "https://example.com/delisting",
                         OffsetDateTime.now()
                 )
         );

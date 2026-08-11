@@ -1,39 +1,68 @@
 package com.julensserver.service;
 
 import com.julensserver.domain.MarketSession;
+import com.julensserver.exception.BusinessException;
+import com.julensserver.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.Clock;
-import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        name = "lens.analysis.scheduling-enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class LensAnalysisScheduler {
 
-    private static final ZoneId NEW_YORK = ZoneId.of("America/New_York");
+    private static final Logger log =
+            LoggerFactory.getLogger(LensAnalysisScheduler.class);
+    private static final ZoneId NEW_YORK =
+            ZoneId.of("America/New_York");
 
     private final LensAnalysisService lensAnalysisService;
+    private final UsMarketSessionResolver marketSessionResolver;
 
     @Scheduled(
-            fixedRateString = "${lens.analysis.schedule-rate-ms:300000}",
-            initialDelayString = "${lens.analysis.schedule-initial-delay-ms:300000}"
+            cron = "${lens.analysis.schedule-cron:0 */5 * * * MON-FRI}",
+            zone = "America/New_York"
     )
-    public void analyzeLatestStocks() {
-        lensAnalysisService.runAnalysis(resolveMarketSession(Clock.system(NEW_YORK)));
+    public void runAnalysis() {
+        Optional<MarketSession> marketSession = marketSessionResolver.resolve(
+                ZonedDateTime.now(NEW_YORK)
+        );
+        if (marketSession.isEmpty()) {
+            return;
+        }
+
+        try {
+            lensAnalysisService.runAnalysis(marketSession.get());
+        } catch (BusinessException exception) {
+            if (exception.getErrorCode()
+                    != ErrorCode.LENS_ANALYSIS_ALREADY_RUNNING) {
+                logFailure(marketSession.get(), exception);
+            }
+        } catch (RuntimeException exception) {
+            logFailure(marketSession.get(), exception);
+        }
     }
 
-    MarketSession resolveMarketSession(Clock clock) {
-        LocalTime now = LocalTime.now(clock);
-
-        if (now.isBefore(LocalTime.of(9, 30))) {
-            return MarketSession.PRE_MARKET;
-        }
-        if (now.isBefore(LocalTime.of(16, 0))) {
-            return MarketSession.REGULAR_MARKET;
-        }
-        return MarketSession.AFTER_MARKET;
+    private void logFailure(
+            MarketSession marketSession,
+            RuntimeException exception
+    ) {
+        log.error(
+                "Scheduled Lens analysis failed. marketSession={}",
+                marketSession,
+                exception
+        );
     }
 }

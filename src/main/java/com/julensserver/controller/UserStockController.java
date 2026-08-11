@@ -2,6 +2,7 @@ package com.julensserver.controller;
 
 import com.julensserver.dto.common.ApiResponse;
 import com.julensserver.dto.stock.StockResponse;
+import com.julensserver.dto.stock.UserStockLatestResponse;
 import com.julensserver.service.UserStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,6 +30,16 @@ public class UserStockController {
 
 
         return ApiResponse.success("관심 종목 조회에 성공했습니다.", stockResponses);
+    }
+
+    @GetMapping("/latest")
+    public ApiResponse<List<UserStockLatestResponse>> getUserStocksLatest(
+            @AuthenticationPrincipal Long userId
+    ) {
+        return ApiResponse.success(
+                "관심 종목 최신 분석 조회에 성공했습니다.",
+                userStockService.getUserStocksLatest(userId)
+        );
     }
 
     @DeleteMapping("/{stockId}")

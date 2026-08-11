@@ -15,6 +15,8 @@ public class StockResponse {
 
     private String companyName;
 
+    private String companyNameKr;
+
     private Exchange exchange;
 
     private Currency currency;
@@ -28,6 +30,7 @@ public class StockResponse {
                 stock.getId(),
                 stock.getTicker(),
                 stock.getCompanyName(),
+                stock.getCompanyNameKr(),
                 stock.getExchange(),
                 stock.getCurrency(),
                 stock.getSector(),
