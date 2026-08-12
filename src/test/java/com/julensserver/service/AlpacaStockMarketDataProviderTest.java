@@ -5,33 +5,29 @@ import com.julensserver.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class FinnhubStockMarketDataProviderTest {
+class AlpacaStockMarketDataProviderTest {
 
     @Test
     void 일봉에서_현재가_등락률_평균거래량을_계산한다() {
-        FinnhubClient.FinnhubCandleResponse response =
-                new FinnhubClient.FinnhubCandleResponse(
+        AlpacaClient.AlpacaBarsResponse response =
+                new AlpacaClient.AlpacaBarsResponse(
                         List.of(
-                                new BigDecimal("100"),
-                                new BigDecimal("105"),
-                                new BigDecimal("110")
+                                bar("100", "1000", "2026-08-10T04:00:00Z"),
+                                bar("105", "3000", "2026-08-11T04:00:00Z"),
+                                bar("110", "6000", "2026-08-12T04:00:00Z")
                         ),
-                        List.of(
-                                new BigDecimal("1000"),
-                                new BigDecimal("3000"),
-                                new BigDecimal("6000")
-                        ),
-                        "ok",
+                        "AAPL",
                         null
                 );
 
         StockMarketData result =
-                FinnhubStockMarketDataProvider.toMarketData(response);
+                AlpacaStockMarketDataProvider.toMarketData(response);
 
         assertEquals(new BigDecimal("110"), result.currentPrice());
         assertEquals(new BigDecimal("4.7619"), result.changeRate());
@@ -42,17 +38,28 @@ class FinnhubStockMarketDataProviderTest {
 
     @Test
     void 데이터가_없으면_외부데이터_오류를_던진다() {
-        FinnhubClient.FinnhubCandleResponse response =
-                new FinnhubClient.FinnhubCandleResponse(
+        AlpacaClient.AlpacaBarsResponse response =
+                new AlpacaClient.AlpacaBarsResponse(
                         List.of(),
-                        List.of(),
-                        "no_data",
+                        "AAPL",
                         null
                 );
 
         assertThrows(
                 BusinessException.class,
-                () -> FinnhubStockMarketDataProvider.toMarketData(response)
+                () -> AlpacaStockMarketDataProvider.toMarketData(response)
+        );
+    }
+
+    private AlpacaClient.AlpacaBar bar(
+            String close,
+            String volume,
+            String timestamp
+    ) {
+        return new AlpacaClient.AlpacaBar(
+                new BigDecimal(close),
+                new BigDecimal(volume),
+                Instant.parse(timestamp)
         );
     }
 }

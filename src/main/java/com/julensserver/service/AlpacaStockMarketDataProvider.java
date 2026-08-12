@@ -14,16 +14,16 @@ import java.util.Objects;
 
 @Component
 @Profile("real")
-public class FinnhubStockMarketDataProvider
+public class AlpacaStockMarketDataProvider
         implements StockMarketDataProvider {
 
     private static final int CANDLE_LOOKBACK_DAYS = 45;
     private static final int AVERAGE_VOLUME_DAYS = 20;
 
-    private final FinnhubClient finnhubClient;
+    private final AlpacaClient alpacaClient;
 
-    public FinnhubStockMarketDataProvider(FinnhubClient finnhubClient) {
-        this.finnhubClient = finnhubClient;
+    public AlpacaStockMarketDataProvider(AlpacaClient alpacaClient) {
+        this.alpacaClient = alpacaClient;
     }
 
     @Override
@@ -32,37 +32,28 @@ public class FinnhubStockMarketDataProvider
                 stock,
                 "시세를 조회할 종목은 null일 수 없습니다."
         );
-        return toMarketData(finnhubClient.getDailyCandles(
+        return toMarketData(alpacaClient.getDailyBars(
                 stock.getTicker(),
                 CANDLE_LOOKBACK_DAYS
         ));
     }
 
     static StockMarketData toMarketData(
-            FinnhubClient.FinnhubCandleResponse response
+            AlpacaClient.AlpacaBarsResponse response
     ) {
-        if (response.error() != null && !response.error().isBlank()) {
-            throw providerError(response.error());
-        }
-        if (!"ok".equalsIgnoreCase(response.status())) {
-            throw providerError("Finnhub returned no candle data");
+        List<AlpacaClient.AlpacaBar> bars = response.bars();
+        if (bars == null || bars.isEmpty()) {
+            throw providerError("Alpaca returned no bar data");
         }
 
-        List<BigDecimal> closes = response.closes();
-        List<BigDecimal> volumes = response.volumes();
-        if (closes == null || volumes == null || closes.isEmpty()
-                || closes.size() != volumes.size()) {
-            throw providerError("Finnhub candle data is incomplete");
-        }
-
-        int lastIndex = closes.size() - 1;
-        BigDecimal currentPrice = closes.get(lastIndex);
+        int lastIndex = bars.size() - 1;
+        BigDecimal currentPrice = bars.get(lastIndex).close();
         if (currentPrice == null || currentPrice.signum() <= 0) {
-            throw providerError("Finnhub current price is invalid");
+            throw providerError("Alpaca current price is invalid");
         }
 
         BigDecimal previousClose = lastIndex > 0
-                ? closes.get(lastIndex - 1)
+                ? bars.get(lastIndex - 1).close()
                 : currentPrice;
         BigDecimal changeRate = previousClose == null
                 || previousClose.signum() == 0
@@ -71,9 +62,11 @@ public class FinnhubStockMarketDataProvider
                 .multiply(BigDecimal.valueOf(100))
                 .divide(previousClose, 4, RoundingMode.HALF_UP);
 
-        long currentVolume = toNonNegativeLong(volumes.get(lastIndex));
+        long currentVolume = toNonNegativeLong(
+                bars.get(lastIndex).volume()
+        );
         long averageVolume20d = calculateAverageVolume(
-                volumes,
+                bars,
                 lastIndex,
                 currentVolume
         );
@@ -91,7 +84,7 @@ public class FinnhubStockMarketDataProvider
     }
 
     private static long calculateAverageVolume(
-            List<BigDecimal> volumes,
+            List<AlpacaClient.AlpacaBar> bars,
             int currentIndex,
             long fallback
     ) {
@@ -103,7 +96,7 @@ public class FinnhubStockMarketDataProvider
         BigDecimal sum = BigDecimal.ZERO;
         int count = 0;
         for (int index = start; index < currentIndex; index++) {
-            BigDecimal volume = volumes.get(index);
+            BigDecimal volume = bars.get(index).volume();
             if (volume != null && volume.signum() >= 0) {
                 sum = sum.add(volume);
                 count++;
