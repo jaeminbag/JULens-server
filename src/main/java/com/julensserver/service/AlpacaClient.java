@@ -29,6 +29,7 @@ public class AlpacaClient {
             LocalTime.of(4, 0);
 
     private final RestClient restClient;
+    private final RestClient screenerRestClient;
     private final String apiKeyId;
     private final String secretKey;
     private final int dataDelayMinutes;
@@ -37,6 +38,9 @@ public class AlpacaClient {
             RestClient.Builder restClientBuilder,
             @Value("${alpaca.base-url:https://data.alpaca.markets/v2}")
             String baseUrl,
+            @Value("${alpaca.screener-base-url:"
+                    + "https://data.alpaca.markets/v1beta1/screener}")
+            String screenerBaseUrl,
             @Value("${alpaca.api-key-id}") String apiKeyId,
             @Value("${alpaca.secret-key}") String secretKey,
             @Value("${alpaca.data-delay-minutes:16}")
@@ -49,6 +53,9 @@ public class AlpacaClient {
         }
 
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        this.screenerRestClient = restClientBuilder
+                .baseUrl(screenerBaseUrl)
+                .build();
         this.apiKeyId = apiKeyId;
         this.secretKey = secretKey;
         this.dataDelayMinutes = dataDelayMinutes;
@@ -91,6 +98,39 @@ public class AlpacaClient {
         }
 
         return getBars(ticker, "1Min", start, end, 10000);
+    }
+
+    public AlpacaMostActivesResponse getMostActiveStocks(int top) {
+        if (top < 1 || top > 100) {
+            throw new IllegalArgumentException(
+                    "거래량 상위 종목 수는 1~100이어야 합니다."
+            );
+        }
+
+        try {
+            AlpacaMostActivesResponse response = screenerRestClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/stocks/most-actives")
+                            .queryParam("by", "volume")
+                            .queryParam("top", top)
+                            .build())
+                    .header("APCA-API-KEY-ID", apiKeyId)
+                    .header("APCA-API-SECRET-KEY", secretKey)
+                    .retrieve()
+                    .body(AlpacaMostActivesResponse.class);
+
+            if (response == null) {
+                throw providerError(
+                        "Alpaca most-actives response is empty"
+                );
+            }
+            return response;
+        } catch (RestClientException exception) {
+            throw providerError(
+                    "Alpaca most-actives request failed",
+                    exception
+            );
+        }
     }
 
     private AlpacaBarsResponse getBars(
@@ -164,6 +204,22 @@ public class AlpacaClient {
             @JsonProperty("c") BigDecimal close,
             @JsonProperty("v") BigDecimal volume,
             @JsonProperty("t") Instant timestamp
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AlpacaMostActivesResponse(
+            @JsonProperty("most_actives")
+            List<AlpacaActiveStock> mostActives,
+            @JsonProperty("last_updated") Instant lastUpdated
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AlpacaActiveStock(
+            String symbol,
+            BigDecimal volume,
+            @JsonProperty("trade_count") BigDecimal tradeCount
     ) {
     }
 }

@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 class StockSyncServiceTest {
 
     @Test
-    void 외부_종목을_갱신하고_분석대상_밖의_종목을_비활성화한다() {
+    void 외부_전체종목을_갱신하고_목록에서_사라진_종목을_비활성화한다() {
         StockRepository repository = mock(StockRepository.class);
         StockSymbolProvider provider = mock(StockSymbolProvider.class);
         Stock apple = stock("AAPL", "Old Apple", "옛 애플", false);
@@ -37,8 +37,7 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
-                new SupportedStockCatalog(),
-                2
+                1
         );
 
         StockSyncResult result = service.synchronize();
@@ -54,9 +53,9 @@ class StockSyncServiceTest {
 
         assertTrue(apple.isActive());
         assertEquals("APPLE INC", apple.getCompanyName());
-        assertEquals("애플", apple.getCompanyNameKr());
+        assertEquals("옛 애플", apple.getCompanyNameKr());
         assertTrue(microsoft.isActive());
-        assertEquals("마이크로소프트", microsoft.getCompanyNameKr());
+        assertEquals("MICROSOFT CORP", microsoft.getCompanyNameKr());
         assertFalse(legacy.isActive());
         assertEquals(2, result.activated());
         assertEquals(1, result.created());
@@ -74,8 +73,7 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
-                new SupportedStockCatalog(),
-                100
+                1
         );
 
         assertThrows(BusinessException.class, service::synchronize);
@@ -84,7 +82,7 @@ class StockSyncServiceTest {
     }
 
     @Test
-    void 지원종목_포함률이_낮으면_기존종목을_비활성화하지_않는다() {
+    void 외부_종목수가_기준보다_적으면_기존종목을_비활성화하지_않는다() {
         StockRepository repository = mock(StockRepository.class);
         StockSymbolProvider provider = mock(StockSymbolProvider.class);
         Stock existing = stock("MSFT", "Microsoft", "마이크로소프트", true);
@@ -95,7 +93,6 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
-                new SupportedStockCatalog(),
                 2
         );
 

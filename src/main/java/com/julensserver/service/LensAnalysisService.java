@@ -25,7 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +42,7 @@ public class LensAnalysisService {
     private final LensAnalysisBatchRepository lensAnalysisBatchRepository;
     private final LensAnalysisRepository lensAnalysisRepository;
     private final StockRepository stockRepository;
+    private final MostActiveStockProvider mostActiveStockProvider;
     private final LensStockAnalyzer lensStockAnalyzer;
     private final LensAnalysisPersistenceService persistenceService;
 
@@ -55,9 +59,18 @@ public class LensAnalysisService {
         LensAnalysisBatch batch = persistenceService.startBatch(marketSession);
 
         try {
-            List<Stock> activeStocks =
-                    stockRepository
-                            .findAllByActiveTrueOrderByTickerAsc();
+            List<String> mostActiveTickers =
+                    mostActiveStockProvider.getMostActiveTickers();
+            if (mostActiveTickers.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.EXTERNAL_DATA_PROVIDER_ERROR,
+                        "Alpaca 거래량 상위 종목 목록이 비어 있습니다."
+                );
+            }
+
+            List<Stock> activeStocks = resolveMostActiveStocks(
+                    mostActiveTickers
+            );
             if (activeStocks.isEmpty()) {
                 throw new BusinessException(
                         ErrorCode.ACTIVE_STOCK_NOT_FOUND
@@ -96,6 +109,28 @@ public class LensAnalysisService {
         return lensAnalysisBatchRepository.existsByStatus(
                 LensBatchStatus.RUNNING
         );
+    }
+
+    private List<Stock> resolveMostActiveStocks(List<String> tickers) {
+        List<String> normalizedTickers = tickers.stream()
+                .filter(ticker -> ticker != null && !ticker.isBlank())
+                .map(ticker -> ticker.trim().toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
+        Map<String, Stock> stocksByTicker = new LinkedHashMap<>();
+        for (Stock stock : stockRepository.findAllByTickerIn(
+                normalizedTickers
+        )) {
+            stocksByTicker.put(
+                    stock.getTicker().trim().toUpperCase(Locale.ROOT),
+                    stock
+            );
+        }
+
+        return normalizedTickers.stream()
+                .map(stocksByTicker::get)
+                .filter(stock -> stock != null && stock.isActive())
+                .toList();
     }
 
     public Page<LensAnalysisResponse> getLatestAnalyses(

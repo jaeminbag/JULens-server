@@ -22,31 +22,24 @@ import java.util.stream.Collectors;
 @Profile("real")
 public class StockSyncService {
 
-    private static final int MAX_SUPPORTED_STOCKS = 100;
-    private static final int MINIMUM_COVERAGE_PERCENT = 80;
-
     private final StockRepository stockRepository;
     private final StockSymbolProvider stockSymbolProvider;
-    private final SupportedStockCatalog supportedStockCatalog;
-    private final int maxActiveStocks;
+    private final int minimumSymbolCount;
 
     public StockSyncService(
             StockRepository stockRepository,
             StockSymbolProvider stockSymbolProvider,
-            SupportedStockCatalog supportedStockCatalog,
-            @Value("${stock.sync.max-active-stocks:100}")
-            int maxActiveStocks
+            @Value("${stock.sync.minimum-symbol-count:1000}")
+            int minimumSymbolCount
     ) {
-        if (maxActiveStocks < 1
-                || maxActiveStocks > MAX_SUPPORTED_STOCKS) {
+        if (minimumSymbolCount < 1) {
             throw new IllegalArgumentException(
-                    "활성 분석 종목 수는 1~100이어야 합니다."
+                    "최소 종목 수는 1 이상이어야 합니다."
             );
         }
         this.stockRepository = stockRepository;
         this.stockSymbolProvider = stockSymbolProvider;
-        this.supportedStockCatalog = supportedStockCatalog;
-        this.maxActiveStocks = maxActiveStocks;
+        this.minimumSymbolCount = minimumSymbolCount;
     }
 
     public StockSyncResult synchronize() {
@@ -67,15 +60,10 @@ public class StockSyncService {
                         LinkedHashMap::new
                 ));
 
-        List<SyncTarget> syncTargets = resolveSyncTargets(symbolsByTicker);
-        int minimumRequired = Math.max(
-                1,
-                (maxActiveStocks * MINIMUM_COVERAGE_PERCENT + 99) / 100
-        );
-        if (syncTargets.size() < minimumRequired) {
+        if (symbolsByTicker.size() < minimumSymbolCount) {
             throw new BusinessException(
                     ErrorCode.EXTERNAL_DATA_PROVIDER_ERROR,
-                    "Finnhub 종목 목록의 지원 종목 포함률이 너무 낮습니다."
+                    "Finnhub 종목 목록의 종목 수가 너무 적습니다."
             );
         }
 
@@ -93,18 +81,15 @@ public class StockSyncService {
         int created = 0;
         int updated = 0;
 
-        for (SyncTarget target : syncTargets) {
-            SupportedStockCatalog.SupportedStock supportedStock =
-                    target.supportedStock();
-            StockSymbolData symbol = target.symbol();
-            String ticker = normalizeTicker(supportedStock.ticker());
+        for (StockSymbolData symbol : symbolsByTicker.values()) {
+            String ticker = normalizeTicker(symbol.ticker());
 
             Stock stock = stocksByTicker.get(ticker);
             if (stock == null) {
                 stock = new Stock(
-                        symbol.ticker(),
+                        ticker,
                         symbol.companyName(),
-                        supportedStock.companyNameKr(),
+                        symbol.companyName(),
                         symbol.exchange(),
                         symbol.currency(),
                         null
@@ -114,7 +99,7 @@ public class StockSyncService {
             } else {
                 stock.synchronizeMetadata(
                         symbol.companyName(),
-                        supportedStock.companyNameKr(),
+                        stock.getCompanyNameKr(),
                         symbol.exchange(),
                         symbol.currency()
                 );
@@ -146,32 +131,7 @@ public class StockSyncService {
         );
     }
 
-    private List<SyncTarget> resolveSyncTargets(
-            Map<String, StockSymbolData> symbolsByTicker
-    ) {
-        List<SyncTarget> targets = new ArrayList<>();
-        for (SupportedStockCatalog.SupportedStock supportedStock
-                : supportedStockCatalog.stocks()) {
-            StockSymbolData symbol = symbolsByTicker.get(
-                    normalizeTicker(supportedStock.ticker())
-            );
-            if (symbol != null) {
-                targets.add(new SyncTarget(supportedStock, symbol));
-            }
-            if (targets.size() >= maxActiveStocks) {
-                break;
-            }
-        }
-        return targets;
-    }
-
     private static String normalizeTicker(String ticker) {
         return ticker.trim().toUpperCase(Locale.ROOT);
-    }
-
-    private record SyncTarget(
-            SupportedStockCatalog.SupportedStock supportedStock,
-            StockSymbolData symbol
-    ) {
     }
 }
