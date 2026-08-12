@@ -1,7 +1,6 @@
 package com.julensserver.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -46,39 +44,6 @@ public class FinnhubClient {
         this.minRequestIntervalNanos = TimeUnit.MILLISECONDS.toNanos(
                 minRequestIntervalMillis
         );
-    }
-
-    public FinnhubCandleResponse getDailyCandles(
-            String ticker,
-            int lookbackDays
-    ) {
-        long from = LocalDate.now(ZoneOffset.UTC)
-                .minusDays(lookbackDays)
-                .atStartOfDay()
-                .toEpochSecond(ZoneOffset.UTC);
-        long to = java.time.Instant.now().getEpochSecond();
-
-        try {
-            awaitRequestSlot();
-            FinnhubCandleResponse response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/stock/candle")
-                            .queryParam("symbol", ticker)
-                            .queryParam("resolution", "D")
-                            .queryParam("from", from)
-                            .queryParam("to", to)
-                            .queryParam("token", apiKey)
-                            .build())
-                    .retrieve()
-                    .body(FinnhubCandleResponse.class);
-
-            if (response == null) {
-                throw providerError("Finnhub candle response is empty");
-            }
-            return response;
-        } catch (RestClientException exception) {
-            throw providerError("Finnhub candle request failed", exception);
-        }
     }
 
     public List<FinnhubNewsItem> getCompanyNews(
@@ -166,15 +131,6 @@ public class FinnhubClient {
         BusinessException exception = providerError(detail);
         exception.initCause(cause);
         return exception;
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record FinnhubCandleResponse(
-            @JsonProperty("c") List<BigDecimal> closes,
-            @JsonProperty("v") List<BigDecimal> volumes,
-            @JsonProperty("s") String status,
-            @JsonProperty("error") String error
-    ) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
