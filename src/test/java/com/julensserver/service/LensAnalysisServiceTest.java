@@ -49,8 +49,11 @@ class LensAnalysisServiceTest {
                 List.of()
         );
 
-        when(fixture.stockRepository
-                .findAllByActiveTrueOrderByTickerAsc())
+        when(fixture.mostActiveStockProvider.getMostActiveTickers())
+                .thenReturn(List.of("FAIL", "PASS"));
+        when(fixture.stockRepository.findAllByTickerIn(
+                List.of("FAIL", "PASS")
+        ))
                 .thenReturn(List.of(failedStock, succeededStock));
         when(fixture.lensStockAnalyzer.analyze(failedStock))
                 .thenThrow(new RuntimeException("provider failure"));
@@ -70,8 +73,11 @@ class LensAnalysisServiceTest {
     void 모든_종목이_실패하면_배치를_실패처리한다() {
         TestFixture fixture = new TestFixture();
         Stock failedStock = fixture.stock("FAIL");
-        when(fixture.stockRepository
-                .findAllByActiveTrueOrderByTickerAsc())
+        when(fixture.mostActiveStockProvider.getMostActiveTickers())
+                .thenReturn(List.of("FAIL"));
+        when(fixture.stockRepository.findAllByTickerIn(
+                List.of("FAIL")
+        ))
                 .thenReturn(List.of(failedStock));
         when(fixture.lensStockAnalyzer.analyze(failedStock))
                 .thenThrow(new RuntimeException("provider failure"));
@@ -91,10 +97,13 @@ class LensAnalysisServiceTest {
     }
 
     @Test
-    void 활성종목이_없으면_빈_완료배치를_만들지_않는다() {
+    void 거래량_상위종목이_DB에_없으면_빈_완료배치를_만들지_않는다() {
         TestFixture fixture = new TestFixture();
-        when(fixture.stockRepository
-                .findAllByActiveTrueOrderByTickerAsc())
+        when(fixture.mostActiveStockProvider.getMostActiveTickers())
+                .thenReturn(List.of("MISSING"));
+        when(fixture.stockRepository.findAllByTickerIn(
+                List.of("MISSING")
+        ))
                 .thenReturn(List.of());
 
         BusinessException exception = assertThrows(
@@ -111,6 +120,28 @@ class LensAnalysisServiceTest {
         verify(fixture.persistenceService).failBatch(1L);
     }
 
+    @Test
+    void 거래량_상위종목_응답이_비어있으면_배치를_실패처리한다() {
+        TestFixture fixture = new TestFixture();
+        when(fixture.mostActiveStockProvider.getMostActiveTickers())
+                .thenReturn(List.of());
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> fixture.service.runAnalysis(
+                        MarketSession.REGULAR_MARKET
+                )
+        );
+
+        assertEquals(
+                ErrorCode.EXTERNAL_DATA_PROVIDER_ERROR,
+                exception.getErrorCode()
+        );
+        verify(fixture.persistenceService).failBatch(1L);
+        verify(fixture.stockRepository, never())
+                .findAllByTickerIn(List.of());
+    }
+
     private static class TestFixture {
         private final LensAnalysisBatchRepository batchRepository =
                 mock(LensAnalysisBatchRepository.class);
@@ -118,6 +149,8 @@ class LensAnalysisServiceTest {
                 mock(LensAnalysisRepository.class);
         private final StockRepository stockRepository =
                 mock(StockRepository.class);
+        private final MostActiveStockProvider mostActiveStockProvider =
+                mock(MostActiveStockProvider.class);
         private final LensStockAnalyzer lensStockAnalyzer =
                 mock(LensStockAnalyzer.class);
         private final LensAnalysisPersistenceService persistenceService =
@@ -137,6 +170,7 @@ class LensAnalysisServiceTest {
                     batchRepository,
                     analysisRepository,
                     stockRepository,
+                    mostActiveStockProvider,
                     lensStockAnalyzer,
                     persistenceService
             );
