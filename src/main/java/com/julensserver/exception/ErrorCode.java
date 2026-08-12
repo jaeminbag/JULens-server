@@ -20,6 +20,11 @@ public enum ErrorCode {
     POST_LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_LIKE_NOT_FOUND", "게시물에 좋아요를 누르지 않았습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다."),
     STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "STOCK_NOT_FOUND", "종목을 찾을 수 없습니다."),
+    ACTIVE_STOCK_NOT_FOUND(
+            HttpStatus.CONFLICT,
+            "ACTIVE_STOCK_NOT_FOUND",
+            "활성화된 분석 대상 종목이 없습니다."
+    ),
     USER_STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_STOCK_NOT_FOUND", "관심종목에서 해당 종목을 찾을 수 없습니다."),
     USER_STOCK_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_STOCK_ALREADY_EXISTS", "이미 관심종목에 등록된 종목입니다."),
     LENS_ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "LENS_ANALYSIS_NOT_FOUND", "완료된 분석 결과를 찾을 수 없습니다."),

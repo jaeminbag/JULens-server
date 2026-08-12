@@ -3,6 +3,7 @@ package com.julensserver.service;
 import com.julensserver.domain.LensAnalysisBatch;
 import com.julensserver.domain.LensBatchStatus;
 import com.julensserver.domain.MarketSession;
+import com.julensserver.domain.Stock;
 import com.julensserver.dto.lens.LensAnalysisResponse;
 import com.julensserver.dto.lens.LensAnalysisSortBy;
 import com.julensserver.exception.BusinessException;
@@ -11,6 +12,8 @@ import com.julensserver.repository.LensAnalysisBatchRepository;
 import com.julensserver.repository.LensAnalysisRepository;
 import com.julensserver.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,6 +32,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class LensAnalysisService {
 
+    private static final Logger log =
+            LoggerFactory.getLogger(LensAnalysisService.class);
     private static final int MAX_PAGE_SIZE = 100;
 
     private final LensAnalysisBatchRepository lensAnalysisBatchRepository;
@@ -49,10 +55,35 @@ public class LensAnalysisService {
         LensAnalysisBatch batch = persistenceService.startBatch(marketSession);
 
         try {
+            List<Stock> activeStocks =
+                    stockRepository
+                            .findAllByActiveTrueOrderByTickerAsc();
+            if (activeStocks.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.ACTIVE_STOCK_NOT_FOUND
+                );
+            }
+
             List<LensAnalysisCandidate> candidates =
-                    stockRepository.findAllByActiveTrue().stream()
-                            .map(lensStockAnalyzer::analyze)
-                            .toList();
+                    new ArrayList<>();
+            for (Stock stock : activeStocks) {
+                try {
+                    candidates.add(lensStockAnalyzer.analyze(stock));
+                } catch (RuntimeException exception) {
+                    log.warn(
+                            "Lens stock analysis skipped. ticker={}",
+                            stock.getTicker(),
+                            exception
+                    );
+                }
+            }
+
+            if (candidates.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.EXTERNAL_DATA_PROVIDER_ERROR,
+                        "활성 종목의 분석 데이터를 한 건도 가져오지 못했습니다."
+                );
+            }
 
             persistenceService.completeBatch(batch.getId(), candidates);
         } catch (RuntimeException exception) {
