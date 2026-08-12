@@ -10,11 +10,13 @@ import java.util.List;
 public record StockDetailResponse(
         StockResponse stock,
         LensAnalysisResponse latestAnalysis,
+        List<StockPricePointResponse> priceHistory,
         List<StockNewsResponse> news
 ) {
     public static StockDetailResponse from(
             Stock stock,
             LensAnalysis latestAnalysis,
+            List<StockPricePointResponse> priceHistory,
             List<StockNews> news
     ) {
         return new StockDetailResponse(
@@ -22,6 +24,7 @@ public record StockDetailResponse(
                 latestAnalysis == null
                         ? null
                         : LensAnalysisResponse.from(latestAnalysis),
+                priceHistory,
                 news.stream()
                         .map(StockNewsResponse::from)
                         .toList()
