@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -61,5 +63,24 @@ public class Stock {
 
     public void deactivate(){
         this.active=false;
+    }
+
+    public void synchronizeMetadata(
+            String companyName,
+            String companyNameKr,
+            Exchange exchange,
+            Currency currency
+    ) {
+        if (companyName == null || companyName.isBlank()
+                || companyNameKr == null || companyNameKr.isBlank()) {
+            throw new IllegalArgumentException(
+                    "종목명과 한국어 종목명은 비어 있을 수 없습니다."
+            );
+        }
+
+        this.companyName = companyName.trim();
+        this.companyNameKr = companyNameKr.trim();
+        this.exchange = Objects.requireNonNull(exchange);
+        this.currency = Objects.requireNonNull(currency);
     }
 }

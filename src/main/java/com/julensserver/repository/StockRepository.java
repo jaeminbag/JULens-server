@@ -13,5 +13,5 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
 
     boolean existsByTicker(String ticker);
 
-    List<Stock> findAllByActiveTrue();
+    List<Stock> findAllByActiveTrueOrderByTickerAsc();
 }
