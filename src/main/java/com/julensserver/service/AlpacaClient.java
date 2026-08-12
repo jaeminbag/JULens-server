@@ -13,13 +13,20 @@ import org.springframework.web.client.RestClientException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Component
 @Profile("real")
 public class AlpacaClient {
+
+    private static final ZoneId NEW_YORK =
+            ZoneId.of("America/New_York");
+    private static final LocalTime EXTENDED_MARKET_OPEN =
+            LocalTime.of(4, 0);
 
     private final RestClient restClient;
     private final String apiKeyId;
@@ -51,28 +58,60 @@ public class AlpacaClient {
             String ticker,
             int lookbackDays
     ) {
-        if (ticker == null || ticker.isBlank()) {
-            throw new IllegalArgumentException(
-                    "조회할 종목 티커는 비어 있을 수 없습니다."
+        validateTicker(ticker);
+
+        LocalDate tradingDate = LocalDate.now(NEW_YORK);
+        Instant start = tradingDate.minusDays(lookbackDays)
+                .atStartOfDay(NEW_YORK)
+                .toInstant();
+        // 오늘 진행 중인 일봉은 제외하고 전일까지 완성된 일봉만 조회한다.
+        Instant end = tradingDate.atStartOfDay(NEW_YORK)
+                .toInstant()
+                .minusNanos(1);
+
+        return getBars(ticker, "1Day", start, end, 1000);
+    }
+
+    public AlpacaBarsResponse getTodayMinuteBars(String ticker) {
+        validateTicker(ticker);
+
+        ZonedDateTime now = ZonedDateTime.now(NEW_YORK);
+        // 프리마켓 개장부터 무료 플랜이 허용하는 지연 시각까지 조회한다.
+        Instant start = now.toLocalDate()
+                .atTime(EXTENDED_MARKET_OPEN)
+                .atZone(NEW_YORK)
+                .toInstant();
+        Instant end = now.toInstant()
+                .minus(dataDelayMinutes, ChronoUnit.MINUTES);
+
+        if (!end.isAfter(start)) {
+            throw providerError(
+                    "Alpaca delayed data is not available yet today"
             );
         }
 
-        LocalDate start = LocalDate.now(ZoneOffset.UTC)
-                .minusDays(lookbackDays);
-        Instant end = Instant.now()
-                .minus(dataDelayMinutes, ChronoUnit.MINUTES);
+        return getBars(ticker, "1Min", start, end, 10000);
+    }
+
+    private AlpacaBarsResponse getBars(
+            String ticker,
+            String timeframe,
+            Instant start,
+            Instant end,
+            int limit
+    ) {
 
         try {
             AlpacaBarsResponse response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/stocks/{symbol}/bars")
-                            .queryParam("timeframe", "1Day")
+                            .queryParam("timeframe", timeframe)
                             .queryParam("start", start)
                             .queryParam("end", end)
                             .queryParam("feed", "sip")
                             .queryParam("adjustment", "split")
                             .queryParam("sort", "asc")
-                            .queryParam("limit", 1000)
+                            .queryParam("limit", limit)
                             .build(ticker.trim().toUpperCase()))
                     .header("APCA-API-KEY-ID", apiKeyId)
                     .header("APCA-API-SECRET-KEY", secretKey)
@@ -85,6 +124,14 @@ public class AlpacaClient {
             return response;
         } catch (RestClientException exception) {
             throw providerError("Alpaca bars request failed", exception);
+        }
+    }
+
+    private void validateTicker(String ticker) {
+        if (ticker == null || ticker.isBlank()) {
+            throw new IllegalArgumentException(
+                    "조회할 종목 티커는 비어 있을 수 없습니다."
+            );
         }
     }
 
