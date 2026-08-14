@@ -1,11 +1,7 @@
 package com.julensserver.service;
 
-import com.julensserver.domain.Currency;
-import com.julensserver.domain.Exchange;
-import com.julensserver.domain.Stock;
 import com.julensserver.dto.stock.RealtimeStockPriceResponse;
 import com.julensserver.exception.BusinessException;
-import com.julensserver.repository.StockRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -18,7 +14,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,9 +23,9 @@ class RealtimeStockPriceServiceTest {
     @Test
     void 구독한_종목의_IEX_가격을_클라이언트에_전달한다() {
         FakeRealtimeStockPriceFeed feed = new FakeRealtimeStockPriceFeed();
-        StockRepository repository = repositoryWithRequestedStocks();
+        StockQueryService stockQueryService = stockQueryService();
         RealtimeStockPriceService service =
-                new RealtimeStockPriceService(feed, repository);
+                new RealtimeStockPriceService(feed, stockQueryService);
         List<RealtimeStockPriceResponse> received = new ArrayList<>();
 
         RealtimeStockPriceService.Subscription subscription =
@@ -55,9 +51,9 @@ class RealtimeStockPriceServiceTest {
     @Test
     void 무료_IEX_한도인_30종목을_초과하면_거절한다() {
         FakeRealtimeStockPriceFeed feed = new FakeRealtimeStockPriceFeed();
-        StockRepository repository = repositoryWithRequestedStocks();
+        StockQueryService stockQueryService = stockQueryService();
         RealtimeStockPriceService service =
-                new RealtimeStockPriceService(feed, repository);
+                new RealtimeStockPriceService(feed, stockQueryService);
         List<String> tickers = java.util.stream.IntStream.rangeClosed(1, 31)
                 .mapToObj(index -> "S" + index)
                 .toList();
@@ -68,26 +64,13 @@ class RealtimeStockPriceServiceTest {
         );
     }
 
-    private StockRepository repositoryWithRequestedStocks() {
-        StockRepository repository = mock(StockRepository.class);
-        when(repository.findAllByTickerIn(anyCollection())).thenAnswer(invocation -> {
+    private StockQueryService stockQueryService() {
+        StockQueryService service = mock(StockQueryService.class);
+        when(service.findActiveTickers(any())).thenAnswer(invocation -> {
             Collection<String> tickers = invocation.getArgument(0);
-            return tickers.stream().map(this::stock).toList();
+            return List.copyOf(tickers);
         });
-        return repository;
-    }
-
-    private Stock stock(String ticker) {
-        Stock stock = new Stock(
-                ticker,
-                ticker + " Company",
-                ticker + " 컴퍼니",
-                Exchange.NASDAQ,
-                Currency.USD,
-                null
-        );
-        stock.activate();
-        return stock;
+        return service;
     }
 
     private static final class FakeRealtimeStockPriceFeed

@@ -1,8 +1,5 @@
 package com.julensserver.service;
 
-import com.julensserver.domain.Currency;
-import com.julensserver.domain.Exchange;
-import com.julensserver.domain.Stock;
 import com.julensserver.dto.stock.StockPricePointResponse;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +25,7 @@ class AlpacaStockPriceHistoryProviderTest {
                 new AlpacaStockPriceHistoryProvider(client);
 
         List<StockPricePointResponse> result =
-                provider.getPriceHistory(stock());
+                provider.getPriceHistory("MU");
 
         assertEquals(2, result.size());
         assertEquals(new BigDecimal("120.10"), result.getFirst().price());
@@ -48,21 +45,10 @@ class AlpacaStockPriceHistoryProviderTest {
                 new AlpacaStockPriceHistoryProvider(client);
 
         List<StockPricePointResponse> result =
-                provider.getPriceHistory(stock());
+                provider.getPriceHistory("MU");
 
         assertEquals(2, result.size());
         verify(client).getDailyBars("MU", 45);
-    }
-
-    private Stock stock() {
-        return new Stock(
-                "MU",
-                "Micron Technology",
-                "마이크론 테크놀로지",
-                Exchange.NASDAQ,
-                Currency.USD,
-                "Technology"
-        );
     }
 
     private AlpacaClient.AlpacaBarsResponse response(

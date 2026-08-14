@@ -3,7 +3,6 @@ package com.julensserver.service;
 import com.julensserver.dto.stock.RealtimeStockPriceResponse;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
-import com.julensserver.repository.StockRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashSet;
@@ -22,7 +21,7 @@ public class RealtimeStockPriceService {
     private static final int FREE_REALTIME_SYMBOL_LIMIT = 30;
 
     private final RealtimeStockPriceFeed priceFeed;
-    private final StockRepository stockRepository;
+    private final StockQueryService stockQueryService;
     private final Object subscriptionLock = new Object();
     private final Map<String, Integer> referenceCounts = new ConcurrentHashMap<>();
     private final Map<String, RealtimeStockPriceResponse> latestPrices =
@@ -32,10 +31,10 @@ public class RealtimeStockPriceService {
 
     public RealtimeStockPriceService(
             RealtimeStockPriceFeed priceFeed,
-            StockRepository stockRepository
+            StockQueryService stockQueryService
     ) {
         this.priceFeed = priceFeed;
-        this.stockRepository = stockRepository;
+        this.stockQueryService = stockQueryService;
         this.priceFeed.setPriceConsumer(this::publish);
     }
 
@@ -107,13 +106,10 @@ public class RealtimeStockPriceService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        Set<String> existingTickers = new LinkedHashSet<>();
-        stockRepository.findAllByTickerIn(tickers)
-                .stream()
-                .filter(stock -> stock.isActive())
-                .forEach(stock -> existingTickers.add(
-                        stock.getTicker().toUpperCase(Locale.ROOT)
-                ));
+        // DB 검증 트랜잭션은 여기서 끝내고, 구독 네트워크 호출은 밖에서 수행한다.
+        Set<String> existingTickers = new LinkedHashSet<>(
+                stockQueryService.findActiveTickers(tickers)
+        );
         if (!existingTickers.containsAll(tickers)) {
             throw new BusinessException(ErrorCode.STOCK_NOT_FOUND);
         }

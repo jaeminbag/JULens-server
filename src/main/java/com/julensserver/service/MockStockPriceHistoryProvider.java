@@ -1,6 +1,5 @@
 package com.julensserver.service;
 
-import com.julensserver.domain.Stock;
 import com.julensserver.dto.stock.StockPricePointResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -15,7 +14,7 @@ public class MockStockPriceHistoryProvider
         implements StockPriceHistoryProvider {
 
     @Override
-    public List<StockPricePointResponse> getPriceHistory(Stock stock) {
+    public List<StockPricePointResponse> getPriceHistory(String ticker) {
         return List.of(
                 point("2026-08-12T08:00:00Z", "24.10"),
                 point("2026-08-12T10:00:00Z", "25.20"),
