@@ -20,7 +20,7 @@ public record RealtimeStockPriceResponse(
                 stockPrice.price(),
                 stockPrice.tradeSize(),
                 stockPrice.timestamp(),
-                "IEX"
+                stockPrice.feed()
         );
     }
 }

@@ -38,7 +38,8 @@ class RealtimeStockPriceServiceTest {
                 "CHOW",
                 new BigDecimal("2.37"),
                 new BigDecimal("100"),
-                Instant.parse("2026-08-14T13:30:00Z")
+                Instant.parse("2026-08-14T13:30:00Z"),
+                "IEX"
         ));
 
         assertEquals(Set.of("CHOW", "MU"), feed.subscribed);

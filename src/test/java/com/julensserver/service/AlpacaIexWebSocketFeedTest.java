@@ -35,5 +35,6 @@ class AlpacaIexWebSocketFeedTest {
         assertEquals("CHOW", received.getFirst().ticker());
         assertEquals("2.37", received.getFirst().price().toPlainString());
         assertEquals("100", received.getFirst().tradeSize().toPlainString());
+        assertEquals("IEX", received.getFirst().feed());
     }
 }

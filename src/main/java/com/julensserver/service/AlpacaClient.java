@@ -18,6 +18,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Component
 @Profile("real")
@@ -133,6 +135,48 @@ public class AlpacaClient {
         }
     }
 
+    /**
+     * 무료 플랜의 overnight 피드에서 종목별 최신 참고 호가를 한 번에 조회한다.
+     * 체결가는 15분 지연이므로 실시간으로 제공되는 bid/ask 호가를 사용한다.
+     */
+    public AlpacaLatestQuotesResponse getLatestOvernightQuotes(
+            Set<String> tickers
+    ) {
+        if (tickers == null || tickers.isEmpty()) {
+            return new AlpacaLatestQuotesResponse(Map.of());
+        }
+        String symbols = tickers.stream()
+                .sorted()
+                .peek(this::validateTicker)
+                .reduce((left, right) -> left + "," + right)
+                .orElseThrow();
+
+        try {
+            AlpacaLatestQuotesResponse response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/stocks/quotes/latest")
+                            .queryParam("symbols", symbols)
+                            .queryParam("feed", "overnight")
+                            .build())
+                    .header("APCA-API-KEY-ID", apiKeyId)
+                    .header("APCA-API-SECRET-KEY", secretKey)
+                    .retrieve()
+                    .body(AlpacaLatestQuotesResponse.class);
+
+            if (response == null) {
+                throw providerError(
+                        "Alpaca overnight quotes response is empty"
+                );
+            }
+            return response;
+        } catch (RestClientException exception) {
+            throw providerError(
+                    "Alpaca overnight quotes request failed",
+                    exception
+            );
+        }
+    }
+
     private AlpacaBarsResponse getBars(
             String ticker,
             String timeframe,
@@ -220,6 +264,20 @@ public class AlpacaClient {
             String symbol,
             BigDecimal volume,
             @JsonProperty("trade_count") BigDecimal tradeCount
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AlpacaLatestQuotesResponse(
+            Map<String, AlpacaQuote> quotes
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AlpacaQuote(
+            @JsonProperty("bp") BigDecimal bidPrice,
+            @JsonProperty("ap") BigDecimal askPrice,
+            @JsonProperty("t") Instant timestamp
     ) {
     }
 }
