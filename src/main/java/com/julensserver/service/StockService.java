@@ -3,6 +3,7 @@ package com.julensserver.service;
 import com.julensserver.dto.stock.StockDetailResponse;
 import com.julensserver.dto.stock.StockPriceHistoryResponse;
 import com.julensserver.dto.stock.StockPricePointResponse;
+import com.julensserver.dto.stock.StockPricePeriod;
 import com.julensserver.dto.stock.StockResponse;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
@@ -49,7 +50,8 @@ public class StockService {
     }
 
     public List<StockPriceHistoryResponse> getPriceHistories(
-            List<String> tickers
+            List<String> tickers,
+            StockPricePeriod period
     ) {
         if (tickers == null || tickers.isEmpty() || tickers.size() > 20) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -70,10 +72,7 @@ public class StockService {
 
         return normalizedTickers.stream()
                 .filter(existingTickers::contains)
-                .map(ticker -> new StockPriceHistoryResponse(
-                        ticker,
-                        getPriceHistory(ticker)
-                ))
+                .map(ticker -> getPriceHistory(ticker, period))
                 .toList();
     }
 
@@ -88,6 +87,30 @@ public class StockService {
                     exception
             );
             return List.of();
+        }
+    }
+
+    private StockPriceHistoryResponse getPriceHistory(
+            String ticker,
+            StockPricePeriod period
+    ) {
+        try {
+            return stockPriceHistoryProvider.getPriceHistory(ticker, period);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Stock price history unavailable. ticker={}, period={}",
+                    ticker,
+                    period,
+                    exception
+            );
+            return new StockPriceHistoryResponse(
+                    ticker,
+                    period,
+                    null,
+                    null,
+                    null,
+                    List.of()
+            );
         }
     }
 }

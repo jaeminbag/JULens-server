@@ -5,6 +5,9 @@ import com.julensserver.dto.stock.StockDetailResponse;
 import com.julensserver.dto.stock.StockPriceHistoryResponse;
 import com.julensserver.dto.stock.StockResponse;
 import com.julensserver.dto.stock.RealtimeStockPriceResponse;
+import com.julensserver.dto.stock.ExchangeRateResponse;
+import com.julensserver.dto.stock.StockPricePeriod;
+import com.julensserver.service.ExchangeRateService;
 import com.julensserver.service.RealtimeStockPriceService;
 import com.julensserver.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class StockController {
     private final StockService stockService;
     private final RealtimeStockPriceService realtimeStockPriceService;
+    private final ExchangeRateService exchangeRateService;
 
     @GetMapping("/{ticker}")
     public ApiResponse<StockResponse> getStockByTicker(@PathVariable String ticker){
@@ -46,11 +50,20 @@ public class StockController {
 
     @GetMapping("/price-history")
     public ApiResponse<List<StockPriceHistoryResponse>> getPriceHistories(
-            @RequestParam List<String> tickers
+            @RequestParam List<String> tickers,
+            @RequestParam(defaultValue = "REALTIME") StockPricePeriod period
     ) {
         return ApiResponse.success(
                 "종목 가격 이력 조회에 성공했습니다.",
-                stockService.getPriceHistories(tickers)
+                stockService.getPriceHistories(tickers, period)
+        );
+    }
+
+    @GetMapping("/exchange-rate/usd-krw")
+    public ApiResponse<ExchangeRateResponse> getUsdKrwExchangeRate() {
+        return ApiResponse.success(
+                "원/달러 기준환율 조회에 성공했습니다.",
+                exchangeRateService.getUsdKrwRate()
         );
     }
 

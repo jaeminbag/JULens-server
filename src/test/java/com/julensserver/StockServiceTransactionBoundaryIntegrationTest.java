@@ -3,6 +3,8 @@ package com.julensserver;
 import com.julensserver.domain.Currency;
 import com.julensserver.domain.Exchange;
 import com.julensserver.domain.Stock;
+import com.julensserver.dto.stock.StockPriceHistoryResponse;
+import com.julensserver.dto.stock.StockPricePeriod;
 import com.julensserver.repository.StockRepository;
 import com.julensserver.service.RealtimeStockPriceFeed;
 import com.julensserver.service.RealtimeStockPriceService;
@@ -20,6 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +58,19 @@ class StockServiceTransactionBoundaryIntegrationTest {
         stock.activate();
         stockRepository.save(stock);
 
+        when(stockPriceHistoryProvider.getPriceHistory(anyString(), any()))
+                .thenAnswer(invocation -> {
+                    assertFalse(TransactionSynchronizationManager
+                            .isActualTransactionActive());
+                    return new StockPriceHistoryResponse(
+                            "TXIO",
+                            StockPricePeriod.REALTIME,
+                            null,
+                            null,
+                            null,
+                            List.of()
+                    );
+                });
         when(stockPriceHistoryProvider.getPriceHistory(anyString()))
                 .thenAnswer(invocation -> {
                     assertFalse(TransactionSynchronizationManager
@@ -62,7 +78,10 @@ class StockServiceTransactionBoundaryIntegrationTest {
                     return List.of();
                 });
 
-        stockService.getPriceHistories(List.of("TXIO"));
+        stockService.getPriceHistories(
+                List.of("TXIO"),
+                StockPricePeriod.REALTIME
+        );
         stockService.getStockDetail("TXIO");
     }
 

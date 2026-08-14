@@ -78,7 +78,14 @@ public class AlpacaClient {
                 .toInstant()
                 .minusNanos(1);
 
-        return getBars(ticker, "1Day", start, end, 1000);
+        return getHistoricalBars(
+                ticker,
+                "1Day",
+                start,
+                end,
+                "sip",
+                1000
+        );
     }
 
     public AlpacaBarsResponse getTodayMinuteBars(String ticker) {
@@ -99,7 +106,52 @@ public class AlpacaClient {
             );
         }
 
-        return getBars(ticker, "1Min", start, end, 10000);
+        return getHistoricalBars(
+                ticker,
+                "1Min",
+                start,
+                end,
+                "sip",
+                10000
+        );
+    }
+
+    /**
+     * 차트가 계산한 구간을 지정된 Alpaca 피드로 조회한다.
+     * 정규·연장장은 sip, 야간장은 boats를 사용한다.
+     */
+    public AlpacaBarsResponse getHistoricalBars(
+            String ticker,
+            String timeframe,
+            Instant start,
+            Instant end,
+            String feed,
+            int limit
+    ) {
+        validateTicker(ticker);
+        if (start == null || end == null || !end.isAfter(start)) {
+            throw new IllegalArgumentException(
+                    "가격 이력 종료 시각은 시작 시각보다 뒤여야 합니다."
+            );
+        }
+        if (feed == null || feed.isBlank()) {
+            throw new IllegalArgumentException(
+                    "가격 이력 피드는 비어 있을 수 없습니다."
+            );
+        }
+
+        return getBars(
+                ticker,
+                timeframe,
+                start,
+                end,
+                feed,
+                Math.min(Math.max(limit, 1), 10000)
+        );
+    }
+
+    public int getDataDelayMinutes() {
+        return dataDelayMinutes;
     }
 
     public AlpacaMostActivesResponse getMostActiveStocks(int top) {
@@ -182,6 +234,7 @@ public class AlpacaClient {
             String timeframe,
             Instant start,
             Instant end,
+            String feed,
             int limit
     ) {
 
@@ -192,7 +245,7 @@ public class AlpacaClient {
                             .queryParam("timeframe", timeframe)
                             .queryParam("start", start)
                             .queryParam("end", end)
-                            .queryParam("feed", "sip")
+                            .queryParam("feed", feed)
                             .queryParam("adjustment", "split")
                             .queryParam("sort", "asc")
                             .queryParam("limit", limit)
