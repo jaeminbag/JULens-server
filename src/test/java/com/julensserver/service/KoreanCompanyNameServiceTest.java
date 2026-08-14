@@ -104,4 +104,56 @@ class KoreanCompanyNameServiceTest {
                 )
         );
     }
+
+    @Test
+    void 거래량_화면에서_확인된_회사명을_자연스럽게_표기한다() {
+        assertEquals(
+                "하이퍼스케일 데이터",
+                service.resolve(
+                        "GPUS",
+                        "HYPERSCALE DATA INC",
+                        "히퍼스캐레 DATA"
+                )
+        );
+        assertEquals(
+                "리콘 테크놀로지 A",
+                service.resolve(
+                        "RCON",
+                        "RECON TECHNOLOGY LTD-CLASS A",
+                        "RECON 테크놀로지 CLASS 애"
+                )
+        );
+        assertEquals(
+                "리미나투스 파마 A",
+                service.resolve(
+                        "LIMN",
+                        "LIMINATUS PHARMA INC-CL A",
+                        "리미내터스 파마 CL 애"
+                )
+        );
+        assertEquals(
+                "망고슈티컬스",
+                service.resolve(
+                        "MGRX",
+                        "MANGOCEUTICALS INC",
+                        "매노케어티캘스"
+                )
+        );
+        assertEquals(
+                "온다스",
+                service.resolve("ONDS", "ONDAS INC", "ONDAS INC")
+        );
+    }
+
+    @Test
+    void 이전_음역기의_영문_토큰과_클래스_애를_다시_변환한다() {
+        assertEquals(
+                "하이퍼스케일 데이터 A",
+                service.resolve(
+                        "TEST",
+                        "HYPERSCALE DATA INC-CLASS A",
+                        "히퍼스캐레 DATA CLASS 애"
+                )
+        );
+    }
 }
