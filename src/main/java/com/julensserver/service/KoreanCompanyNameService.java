@@ -17,7 +17,13 @@ public class KoreanCompanyNameService {
             Map.entry("OFA", "OFA 그룹"),
             Map.entry("FGL", "파운더 그룹 A"),
             Map.entry("DRMA", "더마타 테라퓨틱스"),
-            Map.entry("HXHX", "하오신 홀딩스 A")
+            Map.entry("HXHX", "하오신 홀딩스 A"),
+            Map.entry("GPUS", "하이퍼스케일 데이터"),
+            Map.entry("RCON", "리콘 테크놀로지 A"),
+            Map.entry("YYAI", "에어와"),
+            Map.entry("LIMN", "리미나투스 파마 A"),
+            Map.entry("MGRX", "망고슈티컬스"),
+            Map.entry("ONDS", "온다스")
     );
 
     private static final Set<String> OMITTED_LEGAL_SUFFIXES = Set.of(
@@ -33,6 +39,13 @@ public class KoreanCompanyNameService {
             Map.entry("AMAZON", "아마존"),
             Map.entry("ALPHABET", "알파벳"),
             Map.entry("META", "메타"),
+            Map.entry("HYPERSCALE", "하이퍼스케일"),
+            Map.entry("DATA", "데이터"),
+            Map.entry("RECON", "리콘"),
+            Map.entry("LIMINATUS", "리미나투스"),
+            Map.entry("MANGOCEUTICALS", "망고슈티컬스"),
+            Map.entry("ONDAS", "온다스"),
+            Map.entry("AIRWA", "에어와"),
             Map.entry("DERMATA", "더마타"),
             Map.entry("HAOXIN", "하오신"),
             Map.entry("FOUNDER", "파운더"),
@@ -139,7 +152,8 @@ public class KoreanCompanyNameService {
             // 이미 잘못 음역된 값이 DB에 있어도 검증된 종목명으로 복구한다.
             return override;
         }
-        if (containsHangul(existingKoreanName)) {
+        if (containsHangul(existingKoreanName)
+                && !hasLegacyTransliterationArtifact(existingKoreanName)) {
             return existingKoreanName.trim();
         }
 
@@ -211,6 +225,19 @@ public class KoreanCompanyNameService {
     private boolean containsHangul(String value) {
         return value != null && value.codePoints().anyMatch(codePoint ->
                 codePoint >= 0xAC00 && codePoint <= 0xD7A3);
+    }
+
+    /**
+     * 이전 자동 음역기가 남긴 영문 보통명사와 잘못 읽은 클래스 문자를 찾는다.
+     * 이 값들은 한글을 포함하더라도 보존하지 않고 현재 규칙으로 다시 생성한다.
+     */
+    private boolean hasLegacyTransliterationArtifact(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        return normalized.matches(".*\\b(DATA|CLASS|CL)\\b.*")
+                || normalized.matches(".*\\s[애비씨]$");
     }
 
     private String approximatePronunciation(String word) {
