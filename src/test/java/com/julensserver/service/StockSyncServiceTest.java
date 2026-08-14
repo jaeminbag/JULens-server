@@ -14,7 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,10 +35,14 @@ class StockSyncServiceTest {
                 symbol("AAPL", "APPLE INC", Exchange.NASDAQ),
                 symbol("MSFT", "MICROSOFT CORP", Exchange.NASDAQ)
         ));
+        StockSyncPersistenceService persistenceService =
+                new StockSyncPersistenceService(
+                        repository,
+                        new KoreanCompanyNameService()
+                );
         StockSyncService service = new StockSyncService(
-                repository,
                 provider,
-                new KoreanCompanyNameService(),
+                persistenceService,
                 1
         );
 
@@ -66,43 +71,42 @@ class StockSyncServiceTest {
 
     @Test
     void 외부_종목목록이_비어있으면_기존종목을_변경하지_않는다() {
-        StockRepository repository = mock(StockRepository.class);
         StockSymbolProvider provider = mock(StockSymbolProvider.class);
+        StockSyncPersistenceService persistenceService =
+                mock(StockSyncPersistenceService.class);
         Stock existing = stock("AAPL", "Apple", "애플", true);
         when(provider.getUsCommonStocks()).thenReturn(List.of());
 
         StockSyncService service = new StockSyncService(
-                repository,
                 provider,
-                new KoreanCompanyNameService(),
+                persistenceService,
                 1
         );
 
         assertThrows(BusinessException.class, service::synchronize);
         assertTrue(existing.isActive());
-        verify(repository, never()).saveAll(anyList());
+        verify(persistenceService, never()).synchronize(anyInt(), anyMap());
     }
 
     @Test
     void 외부_종목수가_기준보다_적으면_기존종목을_비활성화하지_않는다() {
-        StockRepository repository = mock(StockRepository.class);
         StockSymbolProvider provider = mock(StockSymbolProvider.class);
+        StockSyncPersistenceService persistenceService =
+                mock(StockSyncPersistenceService.class);
         Stock existing = stock("MSFT", "Microsoft", "마이크로소프트", true);
         when(provider.getUsCommonStocks()).thenReturn(List.of(
                 symbol("AAPL", "APPLE INC", Exchange.NASDAQ)
         ));
 
         StockSyncService service = new StockSyncService(
-                repository,
                 provider,
-                new KoreanCompanyNameService(),
+                persistenceService,
                 2
         );
 
         assertThrows(BusinessException.class, service::synchronize);
         assertTrue(existing.isActive());
-        verify(repository, never()).findAll();
-        verify(repository, never()).saveAll(anyList());
+        verify(persistenceService, never()).synchronize(anyInt(), anyMap());
     }
 
     private StockSymbolData symbol(

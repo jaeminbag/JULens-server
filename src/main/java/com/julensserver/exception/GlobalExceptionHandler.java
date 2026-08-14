@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,6 +18,15 @@ public class GlobalExceptionHandler {
 
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleDisconnectedAsyncClient(
+            AsyncRequestNotUsableException exception
+    ) {
+        // SSE 클라이언트가 먼저 연결을 끊은 경우 응답은 이미 커밋되어 있다.
+        // JSON ErrorResponse를 다시 쓰면 text/event-stream 변환 오류가 발생한다.
+        log.debug("Async client disconnected: {}", exception.getMessage());
+    }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e){
@@ -62,13 +72,5 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ErrorResponse.from(ErrorCode.INTERNAL_SERVER_ERROR));
-
-
     }
-
-
-
-
-
-
 }

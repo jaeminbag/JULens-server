@@ -1,20 +1,15 @@
 package com.julensserver.service;
 
-import com.julensserver.domain.Stock;
 import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
-import com.julensserver.repository.StockRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -22,15 +17,13 @@ import java.util.stream.Collectors;
 @Profile("real")
 public class StockSyncService {
 
-    private final StockRepository stockRepository;
     private final StockSymbolProvider stockSymbolProvider;
-    private final KoreanCompanyNameService koreanCompanyNameService;
+    private final StockSyncPersistenceService persistenceService;
     private final int minimumSymbolCount;
 
     public StockSyncService(
-            StockRepository stockRepository,
             StockSymbolProvider stockSymbolProvider,
-            KoreanCompanyNameService koreanCompanyNameService,
+            StockSyncPersistenceService persistenceService,
             @Value("${stock.sync.minimum-symbol-count:1000}")
             int minimumSymbolCount
     ) {
@@ -39,9 +32,8 @@ public class StockSyncService {
                     "최소 종목 수는 1 이상이어야 합니다."
             );
         }
-        this.stockRepository = stockRepository;
         this.stockSymbolProvider = stockSymbolProvider;
-        this.koreanCompanyNameService = koreanCompanyNameService;
+        this.persistenceService = persistenceService;
         this.minimumSymbolCount = minimumSymbolCount;
     }
 
@@ -70,72 +62,10 @@ public class StockSyncService {
             );
         }
 
-        List<Stock> existingStocks = stockRepository.findAll();
-        Map<String, Stock> stocksByTicker = existingStocks.stream()
-                .collect(Collectors.toMap(
-                        stock -> normalizeTicker(stock.getTicker()),
-                        Function.identity(),
-                        (first, ignored) -> first,
-                        LinkedHashMap::new
-                ));
-
-        List<Stock> stocksToSave = new ArrayList<>();
-        Set<String> activatedTickers = new LinkedHashSet<>();
-        int created = 0;
-        int updated = 0;
-
-        for (StockSymbolData symbol : symbolsByTicker.values()) {
-            String ticker = normalizeTicker(symbol.ticker());
-
-            Stock stock = stocksByTicker.get(ticker);
-            String koreanName = koreanCompanyNameService.resolve(
-                    ticker,
-                    symbol.companyName(),
-                    stock == null ? null : stock.getCompanyNameKr()
-            );
-            if (stock == null) {
-                stock = new Stock(
-                        ticker,
-                        symbol.companyName(),
-                        koreanName,
-                        symbol.exchange(),
-                        symbol.currency(),
-                        null
-                );
-                stocksByTicker.put(ticker, stock);
-                created++;
-            } else {
-                stock.synchronizeMetadata(
-                        symbol.companyName(),
-                        koreanName,
-                        symbol.exchange(),
-                        symbol.currency()
-                );
-                updated++;
-            }
-
-            stock.activate();
-            stocksToSave.add(stock);
-            activatedTickers.add(ticker);
-        }
-
-        int deactivated = 0;
-        for (Stock stock : existingStocks) {
-            String ticker = normalizeTicker(stock.getTicker());
-            if (stock.isActive() && !activatedTickers.contains(ticker)) {
-                stock.deactivate();
-                stocksToSave.add(stock);
-                deactivated++;
-            }
-        }
-
-        stockRepository.saveAll(stocksToSave);
-        return new StockSyncResult(
+        // Finnhub HTTP 호출이 끝난 뒤에만 짧은 DB 저장 트랜잭션을 연다.
+        return persistenceService.synchronize(
                 receivedSymbols.size(),
-                activatedTickers.size(),
-                created,
-                updated,
-                deactivated
+                symbolsByTicker
         );
     }
 

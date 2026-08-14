@@ -1,10 +1,10 @@
 package com.julensserver.controller;
 
 import com.julensserver.dto.common.ApiResponse;
+import com.julensserver.dto.common.PageResponse;
 import com.julensserver.dto.stock.StockNewsResponse;
 import com.julensserver.service.StockNewsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,7 +18,7 @@ public class StockNewsController {
     private final StockNewsService stockNewsService;
 
     @GetMapping
-    public ApiResponse<Page<StockNewsResponse>> getStockNews(
+    public ApiResponse<PageResponse<StockNewsResponse>> getStockNews(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String ticker,
             @RequestParam(defaultValue = "0") int page,
@@ -26,7 +26,9 @@ public class StockNewsController {
     ) {
         return ApiResponse.success(
                 "종목 뉴스 조회에 성공했습니다.",
-                stockNewsService.search(keyword, ticker, page, size)
+                PageResponse.from(
+                        stockNewsService.search(keyword, ticker, page, size)
+                )
         );
     }
 }

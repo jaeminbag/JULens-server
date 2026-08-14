@@ -1,6 +1,7 @@
 package com.julensserver.controller;
 
 import com.julensserver.dto.common.ApiResponse;
+import com.julensserver.dto.common.PageResponse;
 import com.julensserver.dto.post.PostCreateRequest;
 import com.julensserver.dto.post.PostListResponse;
 import com.julensserver.dto.post.PostResponse;
@@ -30,13 +31,16 @@ public class PostController {
     }
 
     @GetMapping
-    public ApiResponse<Page<PostListResponse>> getPosts(
+    public ApiResponse<PageResponse<PostListResponse>> getPosts(
             // latest는 작성일순, likes는 전체 게시글의 좋아요순을 의미한다.
             @RequestParam(defaultValue = "latest") String order,
             @PageableDefault(size = 20) Pageable pageable){
         Page<PostListResponse> postListResponses = postService.getPosts(order, pageable);
 
-        return ApiResponse.success("게시물 목록 조회에 성공했습니다.", postListResponses);
+        return ApiResponse.success(
+                "게시물 목록 조회에 성공했습니다.",
+                PageResponse.from(postListResponses)
+        );
     }
 
     @PostMapping
@@ -61,11 +65,14 @@ public class PostController {
     }
 
     @GetMapping("/popular")
-    public ApiResponse<Page<PostListResponse>> getPopularPosts(
+    public ApiResponse<PageResponse<PostListResponse>> getPopularPosts(
             @PageableDefault(size = 20) Pageable pageable
     ){
         Page<PostListResponse> postListResponses = postService.getPopularPosts(pageable);
-        return ApiResponse.success("인기 게시물 조회에 성공했습니다.", postListResponses);
+        return ApiResponse.success(
+                "인기 게시물 조회에 성공했습니다.",
+                PageResponse.from(postListResponses)
+        );
     }
 
 }
