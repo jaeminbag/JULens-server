@@ -211,7 +211,8 @@ public class AlpacaIexWebSocketFeed
                 ticker,
                 price,
                 tradeSize,
-                timestamp
+                timestamp,
+                "IEX"
         ));
     }
 

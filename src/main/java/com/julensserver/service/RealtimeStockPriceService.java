@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 @Service
 public class RealtimeStockPriceService {
 
-    private static final int FREE_IEX_SYMBOL_LIMIT = 30;
+    private static final int FREE_REALTIME_SYMBOL_LIMIT = 30;
 
     private final RealtimeStockPriceFeed priceFeed;
     private final StockRepository stockRepository;
@@ -55,10 +55,10 @@ public class RealtimeStockPriceService {
                     .filter(ticker -> !referenceCounts.containsKey(ticker))
                     .count();
             if (referenceCounts.size() + additionalSymbols
-                    > FREE_IEX_SYMBOL_LIMIT) {
+                    > FREE_REALTIME_SYMBOL_LIMIT) {
                 throw new BusinessException(
                         ErrorCode.INVALID_INPUT_VALUE,
-                        "무료 IEX는 동시에 최대 30개 종목까지 구독할 수 있습니다."
+                        "무료 실시간 피드는 동시에 최대 30개 종목까지 구독할 수 있습니다."
                 );
             }
 
@@ -101,7 +101,7 @@ public class RealtimeStockPriceService {
                         LinkedHashSet::addAll
                 );
         if (tickers.isEmpty()
-                || tickers.size() > FREE_IEX_SYMBOL_LIMIT
+                || tickers.size() > FREE_REALTIME_SYMBOL_LIMIT
                 || tickers.stream().anyMatch(ticker ->
                 !ticker.matches("[A-Z0-9.-]{1,20}"))) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);

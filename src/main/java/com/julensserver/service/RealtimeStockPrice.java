@@ -7,6 +7,7 @@ public record RealtimeStockPrice(
         String ticker,
         BigDecimal price,
         BigDecimal tradeSize,
-        Instant timestamp
+        Instant timestamp,
+        String feed
 ) {
 }

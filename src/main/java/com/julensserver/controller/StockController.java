@@ -87,7 +87,7 @@ public class StockController {
         try {
             emitter.send(SseEmitter.event()
                     .name("ready")
-                    .data("IEX realtime stream connected"));
+                    .data("Realtime price stream connected"));
         } catch (IOException exception) {
             cleanup.run();
             emitter.completeWithError(exception);
@@ -100,7 +100,7 @@ public class StockController {
             @RequestParam List<String> tickers
     ) {
         return ApiResponse.success(
-                "IEX 최신 실시간 가격 조회에 성공했습니다.",
+                "최신 실시간 가격 조회에 성공했습니다.",
                 realtimeStockPriceService.getLatestPrices(tickers)
         );
     }
