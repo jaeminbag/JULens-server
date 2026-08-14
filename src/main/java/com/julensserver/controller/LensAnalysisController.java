@@ -1,6 +1,7 @@
 package com.julensserver.controller;
 
 import com.julensserver.dto.common.ApiResponse;
+import com.julensserver.dto.common.PageResponse;
 import com.julensserver.dto.lens.LensAnalysisResponse;
 import com.julensserver.dto.lens.LensAnalysisSortBy;
 import com.julensserver.service.LensAnalysisService;
@@ -22,7 +23,7 @@ public class LensAnalysisController {
     private final LensAnalysisService lensAnalysisService;
 
     @GetMapping("/latest")
-    public ApiResponse<Page<LensAnalysisResponse>> getLatestAnalyses(
+    public ApiResponse<PageResponse<LensAnalysisResponse>> getLatestAnalyses(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
@@ -44,7 +45,7 @@ public class LensAnalysisController {
 
         return ApiResponse.success(
                 "최신 종목 분석 결과 조회에 성공했습니다.",
-                response
+                PageResponse.from(response)
         );
     }
 }

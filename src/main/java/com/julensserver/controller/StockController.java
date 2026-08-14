@@ -74,7 +74,8 @@ public class StockController {
                                 .data(price));
                     } catch (IOException | IllegalStateException exception) {
                         close(reference.get());
-                        emitter.completeWithError(exception);
+                        // 탭 이동·새로고침으로 끊긴 SSE는 서버 오류가 아니라 정상 종료다.
+                        emitter.complete();
                     }
                 });
         reference.set(subscription);
@@ -90,7 +91,7 @@ public class StockController {
                     .data("Realtime price stream connected"));
         } catch (IOException exception) {
             cleanup.run();
-            emitter.completeWithError(exception);
+            emitter.complete();
         }
         return emitter;
     }
