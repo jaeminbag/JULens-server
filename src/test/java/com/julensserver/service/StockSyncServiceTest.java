@@ -37,6 +37,7 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
+                new KoreanCompanyNameService(),
                 1
         );
 
@@ -55,7 +56,7 @@ class StockSyncServiceTest {
         assertEquals("APPLE INC", apple.getCompanyName());
         assertEquals("옛 애플", apple.getCompanyNameKr());
         assertTrue(microsoft.isActive());
-        assertEquals("MICROSOFT CORP", microsoft.getCompanyNameKr());
+        assertEquals("마이크로소프트 코퍼레이션", microsoft.getCompanyNameKr());
         assertFalse(legacy.isActive());
         assertEquals(2, result.activated());
         assertEquals(1, result.created());
@@ -73,6 +74,7 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
+                new KoreanCompanyNameService(),
                 1
         );
 
@@ -93,6 +95,7 @@ class StockSyncServiceTest {
         StockSyncService service = new StockSyncService(
                 repository,
                 provider,
+                new KoreanCompanyNameService(),
                 2
         );
 
