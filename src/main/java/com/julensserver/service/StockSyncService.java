@@ -24,11 +24,13 @@ public class StockSyncService {
 
     private final StockRepository stockRepository;
     private final StockSymbolProvider stockSymbolProvider;
+    private final KoreanCompanyNameService koreanCompanyNameService;
     private final int minimumSymbolCount;
 
     public StockSyncService(
             StockRepository stockRepository,
             StockSymbolProvider stockSymbolProvider,
+            KoreanCompanyNameService koreanCompanyNameService,
             @Value("${stock.sync.minimum-symbol-count:1000}")
             int minimumSymbolCount
     ) {
@@ -39,6 +41,7 @@ public class StockSyncService {
         }
         this.stockRepository = stockRepository;
         this.stockSymbolProvider = stockSymbolProvider;
+        this.koreanCompanyNameService = koreanCompanyNameService;
         this.minimumSymbolCount = minimumSymbolCount;
     }
 
@@ -85,11 +88,16 @@ public class StockSyncService {
             String ticker = normalizeTicker(symbol.ticker());
 
             Stock stock = stocksByTicker.get(ticker);
+            String koreanName = koreanCompanyNameService.resolve(
+                    ticker,
+                    symbol.companyName(),
+                    stock == null ? null : stock.getCompanyNameKr()
+            );
             if (stock == null) {
                 stock = new Stock(
                         ticker,
                         symbol.companyName(),
-                        symbol.companyName(),
+                        koreanName,
                         symbol.exchange(),
                         symbol.currency(),
                         null
@@ -99,7 +107,7 @@ public class StockSyncService {
             } else {
                 stock.synchronizeMetadata(
                         symbol.companyName(),
-                        stock.getCompanyNameKr(),
+                        koreanName,
                         symbol.exchange(),
                         symbol.currency()
                 );
