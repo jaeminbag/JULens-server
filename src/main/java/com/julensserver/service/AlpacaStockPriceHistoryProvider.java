@@ -1,6 +1,5 @@
 package com.julensserver.service;
 
-import com.julensserver.domain.Stock;
 import com.julensserver.dto.stock.StockPricePointResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -24,18 +23,18 @@ public class AlpacaStockPriceHistoryProvider
     }
 
     @Override
-    public List<StockPricePointResponse> getPriceHistory(Stock stock) {
+    public List<StockPricePointResponse> getPriceHistory(String ticker) {
         Objects.requireNonNull(
-                stock,
-                "가격 이력을 조회할 종목은 null일 수 없습니다."
+                ticker,
+                "가격 이력을 조회할 티커는 null일 수 없습니다."
         );
 
         // 장중에는 프리마켓부터 현재 지연 시각까지의 실제 분봉을 우선 사용한다.
-        List<AlpacaClient.AlpacaBar> bars = getIntradayBars(stock);
+        List<AlpacaClient.AlpacaBar> bars = getIntradayBars(ticker);
         if (bars.isEmpty()) {
             // 주말·장 시작 전에는 최근 거래일의 일봉으로 그래프를 유지한다.
             bars = safeBars(alpacaClient.getDailyBars(
-                    stock.getTicker(),
+                    ticker,
                     DAILY_LOOKBACK_DAYS
             ));
         }
@@ -54,10 +53,10 @@ public class AlpacaStockPriceHistoryProvider
                 .toList();
     }
 
-    private List<AlpacaClient.AlpacaBar> getIntradayBars(Stock stock) {
+    private List<AlpacaClient.AlpacaBar> getIntradayBars(String ticker) {
         try {
             return safeBars(alpacaClient.getTodayMinuteBars(
-                    stock.getTicker()
+                    ticker
             ));
         } catch (RuntimeException ignored) {
             return List.of();
