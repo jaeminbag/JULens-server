@@ -56,4 +56,52 @@ class KoreanCompanyNameServiceTest {
                 )
         );
     }
+
+    @Test
+    void 주식_클래스_문자는_한글로_음역하지_않는다() {
+        assertEquals(
+                "클라우드 홀딩스 A",
+                service.resolve(
+                        "TEST",
+                        "Cloud Holdings Cl A",
+                        null
+                )
+        );
+        assertEquals(
+                "클라우드 홀딩스 B",
+                service.resolve(
+                        "TEST",
+                        "Cloud Holdings Class B",
+                        null
+                )
+        );
+    }
+
+    @Test
+    void 잘못_저장된_자동_음역명은_검증된_종목명으로_복구한다() {
+        assertEquals(
+                "파운더 그룹 A",
+                service.resolve(
+                        "FGL",
+                        "FOUNDER GROUP LTD-CLASS A",
+                        "파운더 그룹 애"
+                )
+        );
+        assertEquals(
+                "더마타 테라퓨틱스",
+                service.resolve(
+                        "DRMA",
+                        "DERMATA THERAPEUTICS INC",
+                        "더매태 테라퓨틱스"
+                )
+        );
+        assertEquals(
+                "하오신 홀딩스 A",
+                service.resolve(
+                        "HXHX",
+                        "HAOXIN HOLDINGS LTD-CL A",
+                        "하오크신 홀딩스 CL 애"
+                )
+        );
+    }
 }

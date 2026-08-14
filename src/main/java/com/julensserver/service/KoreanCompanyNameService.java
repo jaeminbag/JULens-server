@@ -11,10 +11,13 @@ import java.util.Set;
 @Service
 public class KoreanCompanyNameService {
 
-    private static final Map<String, String> TICKER_OVERRIDES = Map.of(
-            "CHOW", "차우차우 클라우드 인터내셔널 홀딩스",
-            "RMCF", "로키 마운틴 초콜릿 팩토리",
-            "OFA", "OFA 그룹"
+    private static final Map<String, String> TICKER_OVERRIDES = Map.ofEntries(
+            Map.entry("CHOW", "차우차우 클라우드 인터내셔널 홀딩스"),
+            Map.entry("RMCF", "로키 마운틴 초콜릿 팩토리"),
+            Map.entry("OFA", "OFA 그룹"),
+            Map.entry("FGL", "파운더 그룹 A"),
+            Map.entry("DRMA", "더마타 테라퓨틱스"),
+            Map.entry("HXHX", "하오신 홀딩스 A")
     );
 
     private static final Set<String> OMITTED_LEGAL_SUFFIXES = Set.of(
@@ -30,6 +33,9 @@ public class KoreanCompanyNameService {
             Map.entry("AMAZON", "아마존"),
             Map.entry("ALPHABET", "알파벳"),
             Map.entry("META", "메타"),
+            Map.entry("DERMATA", "더마타"),
+            Map.entry("HAOXIN", "하오신"),
+            Map.entry("FOUNDER", "파운더"),
             Map.entry("TESLA", "테슬라"),
             Map.entry("CLOUD", "클라우드"),
             Map.entry("INTERNATIONAL", "인터내셔널"),
@@ -127,25 +133,36 @@ public class KoreanCompanyNameService {
             String englishName,
             String existingKoreanName
     ) {
+        String normalizedTicker = ticker.trim().toUpperCase(Locale.ROOT);
+        String override = TICKER_OVERRIDES.get(normalizedTicker);
+        if (override != null) {
+            // 이미 잘못 음역된 값이 DB에 있어도 검증된 종목명으로 복구한다.
+            return override;
+        }
         if (containsHangul(existingKoreanName)) {
             return existingKoreanName.trim();
         }
 
-        String normalizedTicker = ticker.trim().toUpperCase(Locale.ROOT);
-        String override = TICKER_OVERRIDES.get(normalizedTicker);
-        if (override != null) {
-            return override;
-        }
-
         List<String> localizedWords = new ArrayList<>();
-        for (String token : splitWords(englishName)) {
+        List<String> tokens = splitWords(englishName);
+        for (int index = 0; index < tokens.size(); index++) {
+            String token = tokens.get(index);
             String normalized = token.toUpperCase(Locale.ROOT);
+            if (isShareClassMarker(tokens, index)) {
+                // "CL A"와 "CLASS A"의 CL/CLASS는 제거하고 A만 유지한다.
+                continue;
+            }
             if (OMITTED_LEGAL_SUFFIXES.contains(normalized)) {
                 continue;
             }
             String knownWord = WORDS.get(normalized);
             if (knownWord != null) {
                 localizedWords.add(knownWord);
+                continue;
+            }
+            if (isShareClassLetter(token)) {
+                // 주식 클래스 A/B/C는 발음하지 않고 영문 표기를 유지한다.
+                localizedWords.add(normalized);
                 continue;
             }
             if (isAcronym(token)) {
@@ -157,6 +174,18 @@ public class KoreanCompanyNameService {
 
         String localized = String.join(" ", localizedWords).trim();
         return localized.isEmpty() ? englishName.trim() : localized;
+    }
+
+    private boolean isShareClassMarker(List<String> tokens, int index) {
+        String normalized = tokens.get(index).toUpperCase(Locale.ROOT);
+        return (normalized.equals("CL") || normalized.equals("CLASS"))
+                && index + 1 < tokens.size()
+                && isShareClassLetter(tokens.get(index + 1));
+    }
+
+    private boolean isShareClassLetter(String token) {
+        return token.length() == 1
+                && token.chars().allMatch(Character::isLetter);
     }
 
     private List<String> splitWords(String name) {
