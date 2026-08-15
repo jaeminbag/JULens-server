@@ -20,12 +20,26 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LensAnalysisServiceTest {
+
+    @Test
+    void 완료된_분석_배치가_있는지_확인한다() {
+        TestFixture fixture = new TestFixture();
+        when(fixture.batchRepository.existsByStatus(
+                LensBatchStatus.COMPLETED
+        )).thenReturn(true);
+
+        boolean completedAnalysisExists =
+                fixture.service.hasCompletedAnalysis();
+
+        assertTrue(completedAnalysisExists);
+    }
 
     @Test
     void 한_종목이_실패해도_성공한_종목으로_배치를_완료한다() {
