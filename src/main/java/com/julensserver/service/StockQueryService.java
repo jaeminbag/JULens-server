@@ -10,6 +10,8 @@ import com.julensserver.exception.ErrorCode;
 import com.julensserver.repository.LensAnalysisRepository;
 import com.julensserver.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,20 @@ public class StockQueryService {
 
     public StockResponse getStockByTicker(String ticker) {
         return StockResponse.from(findStock(ticker));
+    }
+
+    /**
+     * 종목명 사전 생성과 일반 종목 탐색에 사용할 수 있도록 DB 종목을 페이지로 조회한다.
+     * 외부 API 호출 없이 짧은 읽기 트랜잭션 안에서 DTO 변환까지 끝낸다.
+     */
+    public Page<StockResponse> getStocks(
+            boolean activeOnly,
+            Pageable pageable
+    ) {
+        Page<Stock> stocks = activeOnly
+                ? stockRepository.findAllByActiveTrue(pageable)
+                : stockRepository.findAll(pageable);
+        return stocks.map(StockResponse::from);
     }
 
     public String findTicker(String ticker) {
