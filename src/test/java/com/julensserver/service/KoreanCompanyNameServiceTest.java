@@ -48,7 +48,7 @@ class KoreanCompanyNameServiceTest {
     @Test
     void 알려지지_않은_고유명사는_억지로_음역하지_않는다() {
         assertEquals(
-                "Vivos Technologies Inc",
+                "비보스 테라퓨틱스",
                 service.resolve(
                         "VVOS",
                         "Vivos Technologies Inc",
@@ -92,12 +92,28 @@ class KoreanCompanyNameServiceTest {
     @Test
     void 기존의_잘못된_한글명도_검증할_수_없으면_공식_영문명으로_되돌린다() {
         assertEquals(
-                "SCIENTURE HOLDINGS INC",
+                "사이언처 홀딩스",
                 service.resolve(
                         "SCNX",
                         "SCIENTURE HOLDINGS INC",
                         "스킨처 홀딩스"
                 )
+        );
+    }
+
+    @Test
+    void 전체_종목_사전과_수동_미매칭_보정을_적용한다() {
+        assertEquals(
+                "애질런트 테크놀로지스",
+                service.resolve("A", "AGILENT TECHNOLOGIES INC", null)
+        );
+        assertEquals(
+                "피타늄 A",
+                service.resolve("PTNM", "PITANIUM LTD-CL A", null)
+        );
+        assertEquals(
+                "비토리아",
+                service.resolve("VTA", "VITTORIA LTD", null)
         );
     }
 
