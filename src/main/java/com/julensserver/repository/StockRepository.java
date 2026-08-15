@@ -1,6 +1,8 @@
 package com.julensserver.repository;
 
 import com.julensserver.domain.Stock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
@@ -15,4 +17,6 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     boolean existsByTicker(String ticker);
 
     List<Stock> findAllByTickerIn(Collection<String> tickers);
+
+    Page<Stock> findAllByActiveTrue(Pageable pageable);
 }
