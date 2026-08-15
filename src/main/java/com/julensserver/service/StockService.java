@@ -9,6 +9,8 @@ import com.julensserver.exception.BusinessException;
 import com.julensserver.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashSet;
@@ -35,6 +37,13 @@ public class StockService {
 
     public StockResponse getStockByTicker(String ticker) {
         return stockQueryService.getStockByTicker(ticker);
+    }
+
+    public Page<StockResponse> getStocks(
+            boolean activeOnly,
+            Pageable pageable
+    ) {
+        return stockQueryService.getStocks(activeOnly, pageable);
     }
 
     public StockDetailResponse getStockDetail(String ticker) {
