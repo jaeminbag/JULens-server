@@ -29,6 +29,8 @@ public class AlpacaClient {
             ZoneId.of("America/New_York");
     private static final LocalTime EXTENDED_MARKET_OPEN =
             LocalTime.of(4, 0);
+    private static final LocalTime EXTENDED_MARKET_CLOSE =
+            LocalTime.of(20, 0);
 
     private final RestClient restClient;
     private final RestClient screenerRestClient;
@@ -105,6 +107,54 @@ public class AlpacaClient {
                     "Alpaca delayed data is not available yet today"
             );
         }
+
+        return getHistoricalBars(
+                ticker,
+                "1Min",
+                start,
+                end,
+                "sip",
+                10000
+        );
+    }
+
+    /**
+     * 무료 SIP 지연 분봉을 오늘 조회할 수 있는 시간대인지 확인한다.
+     * 주말·휴장일 데이터 존재 여부는 실제 bars 응답에서 한 번 더 확인한다.
+     */
+    public boolean isTodayDelayedDataAvailable() {
+        ZonedDateTime now = ZonedDateTime.now(NEW_YORK);
+        Instant start = now.toLocalDate()
+                .atTime(EXTENDED_MARKET_OPEN)
+                .atZone(NEW_YORK)
+                .toInstant();
+        Instant end = now.toInstant()
+                .minus(dataDelayMinutes, ChronoUnit.MINUTES);
+        return end.isAfter(start);
+    }
+
+    /**
+     * 주말·휴장일 초기 분석에서 최근 완료 거래일의 전체 연장장 분봉을 조회한다.
+     */
+    public AlpacaBarsResponse getMinuteBarsForTradingDate(
+            String ticker,
+            LocalDate tradingDate
+    ) {
+        validateTicker(ticker);
+        if (tradingDate == null) {
+            throw new IllegalArgumentException(
+                    "분봉을 조회할 거래일은 null일 수 없습니다."
+            );
+        }
+
+        Instant start = tradingDate
+                .atTime(EXTENDED_MARKET_OPEN)
+                .atZone(NEW_YORK)
+                .toInstant();
+        Instant end = tradingDate
+                .atTime(EXTENDED_MARKET_CLOSE)
+                .atZone(NEW_YORK)
+                .toInstant();
 
         return getHistoricalBars(
                 ticker,

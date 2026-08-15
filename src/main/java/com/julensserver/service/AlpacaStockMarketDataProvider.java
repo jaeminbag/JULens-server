@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,6 +21,8 @@ public class AlpacaStockMarketDataProvider
 
     private static final int CANDLE_LOOKBACK_DAYS = 45;
     private static final int AVERAGE_VOLUME_DAYS = 20;
+    private static final ZoneId NEW_YORK =
+            ZoneId.of("America/New_York");
 
     private final AlpacaClient alpacaClient;
 
@@ -37,10 +41,52 @@ public class AlpacaStockMarketDataProvider
                         stock.getTicker(),
                         CANDLE_LOOKBACK_DAYS
                 );
-        AlpacaClient.AlpacaBarsResponse minuteBars =
-                alpacaClient.getTodayMinuteBars(stock.getTicker());
+        AlpacaClient.AlpacaBarsResponse minuteBars = resolveMinuteBars(
+                stock.getTicker(),
+                dailyBars
+        );
 
         return toMarketData(dailyBars, minuteBars);
+    }
+
+    private AlpacaClient.AlpacaBarsResponse resolveMinuteBars(
+            String ticker,
+            AlpacaClient.AlpacaBarsResponse dailyResponse
+    ) {
+        List<AlpacaClient.AlpacaBar> dailyBars = dailyResponse.bars();
+        if (dailyBars == null || dailyBars.isEmpty()) {
+            throw providerError("Alpaca returned no daily bar data");
+        }
+
+        if (alpacaClient.isTodayDelayedDataAvailable()) {
+            AlpacaClient.AlpacaBarsResponse todayResponse =
+                    alpacaClient.getTodayMinuteBars(ticker);
+            if (hasBars(todayResponse)) {
+                return todayResponse;
+            }
+        }
+
+        // 오늘 분봉이 없는 주말·휴장일에는 일봉이 알려주는 최근 거래일을 사용한다.
+        AlpacaClient.AlpacaBar latestDailyBar =
+                dailyBars.get(dailyBars.size() - 1);
+        if (latestDailyBar.timestamp() == null) {
+            throw providerError("Alpaca daily bar timestamp is missing");
+        }
+        LocalDate latestTradingDate = latestDailyBar.timestamp()
+                .atZone(NEW_YORK)
+                .toLocalDate();
+        return alpacaClient.getMinuteBarsForTradingDate(
+                ticker,
+                latestTradingDate
+        );
+    }
+
+    private static boolean hasBars(
+            AlpacaClient.AlpacaBarsResponse response
+    ) {
+        return response != null
+                && response.bars() != null
+                && !response.bars().isEmpty();
     }
 
     static StockMarketData toMarketData(
@@ -56,12 +102,16 @@ public class AlpacaStockMarketDataProvider
             throw providerError("Alpaca returned no intraday bar data");
         }
 
+        AlpacaClient.AlpacaBar currentBar =
+                minuteBars.get(minuteBars.size() - 1);
+        int previousCloseIndex = resolvePreviousCloseIndex(
+                dailyBars,
+                currentBar
+        );
         BigDecimal previousClose = dailyBars
-                .get(dailyBars.size() - 1)
+                .get(previousCloseIndex)
                 .close();
-        BigDecimal currentPrice = minuteBars
-                .get(minuteBars.size() - 1)
-                .close();
+        BigDecimal currentPrice = currentBar.close();
         if (currentPrice == null || currentPrice.signum() <= 0) {
             throw providerError("Alpaca current price is invalid");
         }
@@ -72,12 +122,15 @@ public class AlpacaStockMarketDataProvider
                 .multiply(BigDecimal.valueOf(100))
                 .divide(previousClose, 4, RoundingMode.HALF_UP);
 
-        // 오늘 프리마켓부터 현재 지연 시각까지의 누적 거래량이다.
+        // 선택한 거래일의 프리마켓부터 마지막 분봉까지 누적한 거래량이다.
         long currentVolume = minuteBars.stream()
                 .map(AlpacaClient.AlpacaBar::volume)
                 .mapToLong(AlpacaStockMarketDataProvider::toNonNegativeLong)
                 .sum();
-        long averageVolume20d = calculateAverageVolume(dailyBars);
+        // fallback 거래일 자체는 평균 거래량 기준에서 제외한다.
+        long averageVolume20d = calculateAverageVolume(
+                dailyBars.subList(0, previousCloseIndex + 1)
+        );
         BigDecimal tradingValue = currentPrice
                 .multiply(BigDecimal.valueOf(currentVolume))
                 .setScale(2, RoundingMode.HALF_UP);
@@ -89,6 +142,34 @@ public class AlpacaStockMarketDataProvider
                 averageVolume20d,
                 tradingValue
         );
+    }
+
+    private static int resolvePreviousCloseIndex(
+            List<AlpacaClient.AlpacaBar> dailyBars,
+            AlpacaClient.AlpacaBar currentBar
+    ) {
+        int index = dailyBars.size() - 1;
+        AlpacaClient.AlpacaBar latestDailyBar = dailyBars.get(index);
+
+        if (currentBar.timestamp() != null
+                && latestDailyBar.timestamp() != null) {
+            LocalDate currentTradingDate = currentBar.timestamp()
+                    .atZone(NEW_YORK)
+                    .toLocalDate();
+            LocalDate latestDailyDate = latestDailyBar.timestamp()
+                    .atZone(NEW_YORK)
+                    .toLocalDate();
+            if (currentTradingDate.equals(latestDailyDate)) {
+                index--;
+            }
+        }
+
+        if (index < 0) {
+            throw providerError(
+                    "Alpaca returned no previous close for intraday data"
+            );
+        }
+        return index;
     }
 
     private static long calculateAverageVolume(
