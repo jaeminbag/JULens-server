@@ -13,6 +13,9 @@ import com.julensserver.service.StockService;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +47,17 @@ public class StockController {
                 thread.setDaemon(true);
                 return thread;
             });
+
+    @GetMapping
+    public ApiResponse<Page<StockResponse>> getStocks(
+            @RequestParam(defaultValue = "true") boolean activeOnly,
+            @PageableDefault(size = 200, sort = "ticker") Pageable pageable
+    ) {
+        return ApiResponse.success(
+                "종목 목록 조회에 성공했습니다.",
+                stockService.getStocks(activeOnly, pageable)
+        );
+    }
 
     @GetMapping("/{ticker}")
     public ApiResponse<StockResponse> getStockByTicker(@PathVariable String ticker){
