@@ -2,7 +2,13 @@ package com.julensserver.service;
 
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -10,6 +16,9 @@ import java.util.Set;
 
 @Service
 public class KoreanCompanyNameService {
+
+    private static final String REFERENCE_NAMES_RESOURCE =
+            "/company-names-ko.tsv";
 
     private static final Map<String, String> TICKER_OVERRIDES = Map.ofEntries(
             Map.entry("CHOW", "차우차우 클라우드 인터내셔널 홀딩스"),
@@ -57,6 +66,13 @@ public class KoreanCompanyNameService {
             Map.entry("PCG", "PG&E"),
             Map.entry("BAC", "뱅크오브아메리카")
     );
+
+    /**
+     * 운영 DB 전체 종목과 국내 금융 서비스의 한국어 표기를 티커로 대조한 사전이다.
+     * 런타임마다 외부 번역 API를 호출하지 않아 이름과 서비스 동작을 안정적으로 유지한다.
+     */
+    private static final Map<String, String> REFERENCE_NAMES =
+            loadReferenceNames();
 
     private static final Set<String> OMITTED_LEGAL_SUFFIXES = Set.of(
             "INC", "INCORPORATED", "LTD", "LIMITED", "PLC", "LLC",
@@ -186,6 +202,10 @@ public class KoreanCompanyNameService {
             // 이미 잘못 음역된 값이 DB에 있어도 검증된 종목명으로 복구한다.
             return override;
         }
+        String referenceName = REFERENCE_NAMES.get(normalizedTicker);
+        if (referenceName != null) {
+            return referenceName;
+        }
         List<String> localizedWords = new ArrayList<>();
         List<String> tokens = splitWords(englishName);
         for (int index = 0; index < tokens.size(); index++) {
@@ -216,6 +236,50 @@ public class KoreanCompanyNameService {
 
         String localized = String.join(" ", localizedWords).trim();
         return localized.isEmpty() ? englishName.trim() : localized;
+    }
+
+    private static Map<String, String> loadReferenceNames() {
+        InputStream input = KoreanCompanyNameService.class.getResourceAsStream(
+                REFERENCE_NAMES_RESOURCE
+        );
+        if (input == null) {
+            throw new IllegalStateException(
+                    "한국어 회사명 사전을 찾을 수 없습니다."
+            );
+        }
+
+        Map<String, String> names = new LinkedHashMap<>();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(input, StandardCharsets.UTF_8)
+        )) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank() || line.startsWith("#")) {
+                    continue;
+                }
+                String[] columns = line.split("\\t", 2);
+                if (columns.length != 2
+                        || columns[0].isBlank()
+                        || columns[1].isBlank()) {
+                    throw new IllegalStateException(
+                            "잘못된 한국어 회사명 사전 행: " + line
+                    );
+                }
+                String ticker = columns[0].trim().toUpperCase(Locale.ROOT);
+                String previous = names.put(ticker, columns[1].trim());
+                if (previous != null) {
+                    throw new IllegalStateException(
+                            "한국어 회사명 사전에 중복 티커가 있습니다: " + ticker
+                    );
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "한국어 회사명 사전을 읽지 못했습니다.",
+                    exception
+            );
+        }
+        return Map.copyOf(names);
     }
 
     private boolean isShareClassMarker(List<String> tokens, int index) {
