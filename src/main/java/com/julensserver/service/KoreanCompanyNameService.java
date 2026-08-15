@@ -23,7 +23,39 @@ public class KoreanCompanyNameService {
             Map.entry("YYAI", "에어와"),
             Map.entry("LIMN", "리미나투스 파마 A"),
             Map.entry("MGRX", "망고슈티컬스"),
-            Map.entry("ONDS", "온다스")
+            Map.entry("ONDS", "온다스"),
+            // 자동 음역으로 어색하게 표시됐던 주요 종목은 실제 통용 표기를 사용한다.
+            Map.entry("AMD", "AMD"),
+            Map.entry("SURG", "서지페이스"),
+            Map.entry("HUMA", "휴마사이트"),
+            Map.entry("NBIS", "네비우스 그룹"),
+            Map.entry("RDDT", "레딧 A"),
+            Map.entry("CRWV", "코어위브 A"),
+            Map.entry("AVGO", "브로드컴"),
+            Map.entry("PLTR", "팔란티어 테크놀로지스 A"),
+            Map.entry("PFE", "화이자"),
+            Map.entry("ORCL", "오라클"),
+            Map.entry("SMCI", "슈퍼 마이크로 컴퓨터"),
+            Map.entry("F", "포드 모터"),
+            Map.entry("TSLA", "테슬라"),
+            Map.entry("MU", "마이크론 테크놀로지"),
+            Map.entry("CSCO", "시스코 시스템즈"),
+            Map.entry("AAPL", "애플"),
+            Map.entry("AMZN", "아마존"),
+            Map.entry("NFLX", "넷플릭스"),
+            Map.entry("INTC", "인텔"),
+            Map.entry("OPEN", "오픈도어 테크놀로지스"),
+            Map.entry("SMR", "뉴스케일 파워"),
+            Map.entry("SOFI", "소파이 테크놀로지스"),
+            Map.entry("NVDA", "엔비디아"),
+            Map.entry("PATH", "유아이패스 A"),
+            Map.entry("AAL", "아메리칸 항공 그룹"),
+            Map.entry("ACHR", "아처 에비에이션 A"),
+            Map.entry("JOBY", "조비 에비에이션"),
+            Map.entry("NKE", "나이키 B"),
+            Map.entry("T", "AT&T"),
+            Map.entry("PCG", "PG&E"),
+            Map.entry("BAC", "뱅크오브아메리카")
     );
 
     private static final Set<String> OMITTED_LEGAL_SUFFIXES = Set.of(
@@ -146,17 +178,14 @@ public class KoreanCompanyNameService {
             String englishName,
             String existingKoreanName
     ) {
+        // 기존 값에는 과거 자동 음역 결과가 섞여 있으므로 보존 여부를 추측하지 않고
+        // 티커 사전과 안전한 단어 조합 규칙으로 매번 결정적으로 다시 계산한다.
         String normalizedTicker = ticker.trim().toUpperCase(Locale.ROOT);
         String override = TICKER_OVERRIDES.get(normalizedTicker);
         if (override != null) {
             // 이미 잘못 음역된 값이 DB에 있어도 검증된 종목명으로 복구한다.
             return override;
         }
-        if (containsHangul(existingKoreanName)
-                && !hasLegacyTransliterationArtifact(existingKoreanName)) {
-            return existingKoreanName.trim();
-        }
-
         List<String> localizedWords = new ArrayList<>();
         List<String> tokens = splitWords(englishName);
         for (int index = 0; index < tokens.size(); index++) {
@@ -179,11 +208,10 @@ public class KoreanCompanyNameService {
                 localizedWords.add(normalized);
                 continue;
             }
-            if (isAcronym(token)) {
-                localizedWords.add(normalized);
-                continue;
-            }
-            localizedWords.add(approximatePronunciation(token));
+            // 고유명사의 발음은 철자 규칙만으로 신뢰성 있게 만들 수 없다.
+            // 모르는 단어가 하나라도 있으면 어색한 한글을 생성하지 않고
+            // 데이터 제공자가 준 공식 영문 회사명을 그대로 사용한다.
+            return englishName.trim();
         }
 
         String localized = String.join(" ", localizedWords).trim();
@@ -214,218 +242,4 @@ public class KoreanCompanyNameService {
         return cleaned.isEmpty() ? List.of() : List.of(cleaned.split("\\s+"));
     }
 
-    private boolean isAcronym(String token) {
-        return token.length() >= 2
-                && token.length() <= 6
-                && token.chars().allMatch(character ->
-                Character.isUpperCase(character)
-                        || Character.isDigit(character));
-    }
-
-    private boolean containsHangul(String value) {
-        return value != null && value.codePoints().anyMatch(codePoint ->
-                codePoint >= 0xAC00 && codePoint <= 0xD7A3);
-    }
-
-    /**
-     * 이전 자동 음역기가 남긴 영문 보통명사와 잘못 읽은 클래스 문자를 찾는다.
-     * 이 값들은 한글을 포함하더라도 보존하지 않고 현재 규칙으로 다시 생성한다.
-     */
-    private boolean hasLegacyTransliterationArtifact(String value) {
-        if (value == null || value.isBlank()) {
-            return false;
-        }
-        String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return normalized.matches(".*\\b(DATA|CLASS|CL)\\b.*")
-                || normalized.matches(".*\\s[애비씨]$");
-    }
-
-    private String approximatePronunciation(String word) {
-        List<String> sounds = tokenizeSounds(word.toLowerCase(Locale.ROOT));
-        StringBuilder result = new StringBuilder();
-
-        for (int index = 0; index < sounds.size(); index++) {
-            String sound = sounds.get(index);
-            String fixedPronunciation = fixedPronunciation(sound);
-            if (fixedPronunciation != null) {
-                result.append(fixedPronunciation);
-                continue;
-            }
-            if (isVowel(sound)) {
-                result.append(vowelWithoutOnset(sound));
-                continue;
-            }
-
-            if (index + 1 < sounds.size() && isVowel(sounds.get(index + 1))) {
-                result.append(syllable(sound, sounds.get(index + 1)));
-                index++;
-            } else if (isAttachableFinal(sound)
-                    && appendFinalConsonant(result, sound)) {
-                // 영어 단어 끝의 n, m, l, ng는 앞 음절의 받침으로 붙인다.
-            } else {
-                result.append(consonantWithoutVowel(sound));
-            }
-        }
-
-        return result.isEmpty() ? word.toUpperCase(Locale.ROOT) : result.toString();
-    }
-
-    private String fixedPronunciation(String sound) {
-        return switch (sound) {
-            case "tion", "sion" -> "션";
-            case "ture" -> "처";
-            default -> null;
-        };
-    }
-
-    private List<String> tokenizeSounds(String word) {
-        List<String> sounds = new ArrayList<>();
-        for (int index = 0; index < word.length();) {
-            String remaining = word.substring(index);
-            String matched = longestPrefix(
-                    remaining,
-                    "eigh", "ough", "tion", "sion", "ture",
-                    "igh", "air", "eer", "ch", "sh", "th", "ph",
-                    "ck", "ng", "qu", "ee", "ea", "oo", "oa",
-                    "ou", "ow", "ai", "ay", "oi", "oy", "au",
-                    "aw", "ie", "ue", "er", "ir", "ur", "ar", "or"
-            );
-            if (matched == null) {
-                matched = String.valueOf(word.charAt(index));
-            }
-            sounds.add(matched);
-            index += matched.length();
-        }
-        return sounds;
-    }
-
-    private String longestPrefix(String value, String... candidates) {
-        for (String candidate : candidates) {
-            if (value.startsWith(candidate)) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    private boolean isVowel(String sound) {
-        return Set.of(
-                "a", "e", "i", "o", "u", "y", "eigh", "ough",
-                "igh", "air", "eer", "ee", "ea", "oo", "oa",
-                "ou", "ow", "ai", "ay", "oi", "oy", "au", "aw",
-                "ie", "ue", "er", "ir", "ur", "ar", "or"
-        ).contains(sound);
-    }
-
-    private String syllable(String consonant, String vowel) {
-        String initial = switch (consonant) {
-            case "b", "v" -> "ㅂ";
-            case "c", "k", "ck", "q", "qu" -> "ㅋ";
-            case "d" -> "ㄷ";
-            case "f", "ph" -> "ㅍ";
-            case "g" -> "ㄱ";
-            case "h" -> "ㅎ";
-            case "j", "z" -> "ㅈ";
-            case "l", "r" -> "ㄹ";
-            case "m" -> "ㅁ";
-            case "n", "ng" -> "ㄴ";
-            case "p" -> "ㅍ";
-            case "s", "sh", "th" -> "ㅅ";
-            case "t" -> "ㅌ";
-            case "w", "y" -> "ㅇ";
-            case "ch" -> "ㅊ";
-            default -> "ㅇ";
-        };
-        return composeInitialAndVowel(initial, vowel);
-    }
-
-    private String composeInitialAndVowel(String initial, String vowel) {
-        String koreanVowel = switch (vowel) {
-            case "a" -> "ㅐ";
-            case "e", "air" -> "ㅔ";
-            case "i", "ee", "ea", "eer", "ie", "y" -> "ㅣ";
-            case "o", "oa", "or", "ough" -> "ㅗ";
-            case "u", "er", "ir", "ur" -> "ㅓ";
-            case "oo", "ue" -> "ㅜ";
-            case "ou", "ow" -> "ㅏ";
-            case "ai", "ay", "eigh" -> "ㅔ";
-            case "oi", "oy" -> "ㅚ";
-            case "au", "aw" -> "ㅗ";
-            case "igh" -> "ㅏ";
-            case "ar" -> "ㅏ";
-            default -> "ㅡ";
-        };
-        String first = compose(initial, koreanVowel, "");
-        return switch (vowel) {
-            case "ou", "ow" -> first + "우";
-            case "ai", "ay", "eigh" -> first + "이";
-            case "oi", "oy" -> first + "이";
-            case "igh" -> first + "이";
-            default -> first;
-        };
-    }
-
-    private String vowelWithoutOnset(String vowel) {
-        return composeInitialAndVowel("ㅇ", vowel);
-    }
-
-    private boolean isAttachableFinal(String sound) {
-        return Set.of("n", "m", "l", "ng").contains(sound);
-    }
-
-    private boolean appendFinalConsonant(StringBuilder result, String sound) {
-        if (result.isEmpty()) {
-            return false;
-        }
-        int lastIndex = result.length() - 1;
-        char last = result.charAt(lastIndex);
-        if (last < 0xAC00 || last > 0xD7A3 || (last - 0xAC00) % 28 != 0) {
-            return false;
-        }
-        int finalIndex = switch (sound) {
-            case "n" -> 4;
-            case "l" -> 8;
-            case "m" -> 16;
-            case "ng" -> 21;
-            default -> 0;
-        };
-        result.setCharAt(lastIndex, (char) (last + finalIndex));
-        return true;
-    }
-
-    private String consonantWithoutVowel(String consonant) {
-        return switch (consonant) {
-            case "b", "v" -> "브";
-            case "c", "k", "ck", "q", "qu", "x" -> "크";
-            case "d" -> "드";
-            case "f", "ph" -> "프";
-            case "g" -> "그";
-            case "h" -> "흐";
-            case "j" -> "지";
-            case "l", "r" -> "르";
-            case "m" -> "므";
-            case "n", "ng" -> "느";
-            case "p" -> "프";
-            case "s", "th" -> "스";
-            case "sh" -> "시";
-            case "t" -> "트";
-            case "w" -> "우";
-            case "y" -> "이";
-            case "z" -> "즈";
-            case "ch" -> "치";
-            default -> "";
-        };
-    }
-
-    private String compose(String initial, String vowel, String finalConsonant) {
-        String initials = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
-        String vowels = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ";
-        String finals = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ";
-        int initialIndex = initials.indexOf(initial);
-        int vowelIndex = vowels.indexOf(vowel);
-        int finalIndex = finals.indexOf(finalConsonant.isEmpty() ? " " : finalConsonant);
-        return String.valueOf((char) (
-                0xAC00 + (initialIndex * 21 + vowelIndex) * 28 + finalIndex
-        ));
-    }
 }
