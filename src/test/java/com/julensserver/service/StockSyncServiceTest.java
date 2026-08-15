@@ -59,7 +59,8 @@ class StockSyncServiceTest {
 
         assertTrue(apple.isActive());
         assertEquals("APPLE INC", apple.getCompanyName());
-        assertEquals("옛 애플", apple.getCompanyNameKr());
+        // 기존의 임의 한글명도 현재 검증된 표기 기준으로 다시 동기화한다.
+        assertEquals("애플", apple.getCompanyNameKr());
         assertTrue(microsoft.isActive());
         assertEquals("마이크로소프트 코퍼레이션", microsoft.getCompanyNameKr());
         assertFalse(legacy.isActive());
