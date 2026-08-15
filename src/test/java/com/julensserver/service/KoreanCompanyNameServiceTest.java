@@ -46,13 +46,57 @@ class KoreanCompanyNameServiceTest {
     }
 
     @Test
-    void 알려지지_않은_단어도_한글_발음으로_대체한다() {
+    void 알려지지_않은_고유명사는_억지로_음역하지_않는다() {
         assertEquals(
-                "비보스 테크놀로지스",
+                "Vivos Technologies Inc",
                 service.resolve(
                         "VVOS",
                         "Vivos Technologies Inc",
                         "Vivos Technologies Inc"
+                )
+        );
+    }
+
+    @Test
+    void 운영_화면에서_확인된_주요_종목은_통용_표기로_교정한다() {
+        assertEquals(
+                "서지페이스",
+                service.resolve("SURG", "SURGEPAYS INC", "서게페이스")
+        );
+        assertEquals(
+                "휴마사이트",
+                service.resolve("HUMA", "HUMACYTE INC", "허매키테")
+        );
+        assertEquals(
+                "코어위브 A",
+                service.resolve(
+                        "CRWV",
+                        "COREWEAVE INC-CL A",
+                        "코에이베 A"
+                )
+        );
+        assertEquals(
+                "팔란티어 테크놀로지스 A",
+                service.resolve(
+                        "PLTR",
+                        "PALANTIR TECHNOLOGIES INC-A",
+                        "패랜터 테크놀로지스 A"
+                )
+        );
+        assertEquals(
+                "넷플릭스",
+                service.resolve("NFLX", "NETFLIX INC", "네트프리크")
+        );
+    }
+
+    @Test
+    void 기존의_잘못된_한글명도_검증할_수_없으면_공식_영문명으로_되돌린다() {
+        assertEquals(
+                "SCIENTURE HOLDINGS INC",
+                service.resolve(
+                        "SCNX",
+                        "SCIENTURE HOLDINGS INC",
+                        "스킨처 홀딩스"
                 )
         );
     }
