@@ -111,6 +111,16 @@ public class LensAnalysisService {
         );
     }
 
+    /**
+     * 최초 배포처럼 비어 있는 DB에서 분석 초기화가 필요한지 확인한다.
+     * 완료 배치가 하나라도 있으면 기존 결과와 정기 스케줄을 그대로 사용한다.
+     */
+    public boolean hasCompletedAnalysis() {
+        return lensAnalysisBatchRepository.existsByStatus(
+                LensBatchStatus.COMPLETED
+        );
+    }
+
     private List<Stock> resolveMostActiveStocks(List<String> tickers) {
         List<String> normalizedTickers = tickers.stream()
                 .filter(ticker -> ticker != null && !ticker.isBlank())
