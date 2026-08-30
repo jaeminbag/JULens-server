@@ -16,6 +16,7 @@ import com.julensserver.repository.StockRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,16 +30,20 @@ import static org.mockito.Mockito.when;
 class LensAnalysisServiceTest {
 
     @Test
-    void 완료된_분석_배치가_있는지_확인한다() {
+    void 기준_시각_이후에_완료된_분석_배치가_있는지_확인한다() {
         TestFixture fixture = new TestFixture();
-        when(fixture.batchRepository.existsByStatus(
-                LensBatchStatus.COMPLETED
-        )).thenReturn(true);
+        LocalDateTime completedAtOrAfter =
+                LocalDateTime.of(2026, 8, 29, 12, 0);
+        when(fixture.batchRepository
+                .existsByStatusAndCompletedAtGreaterThanEqual(
+                        LensBatchStatus.COMPLETED,
+                        completedAtOrAfter
+                )).thenReturn(true);
 
-        boolean completedAnalysisExists =
-                fixture.service.hasCompletedAnalysis();
+        boolean recentCompletedAnalysisExists = fixture.service
+                .hasRecentCompletedAnalysis(completedAtOrAfter);
 
-        assertTrue(completedAnalysisExists);
+        assertTrue(recentCompletedAnalysisExists);
     }
 
     @Test

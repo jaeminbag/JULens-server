@@ -9,8 +9,10 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
- * 새 배포 DB에 완료된 Lens 분석이 없을 때 실제 분석을 한 번 생성한다.
+ * 완료된 Lens 분석이 없거나 오래됐을 때 실제 분석을 한 번 생성한다.
  * 외부 API 호출이 애플리케이션 시작 완료를 막지 않도록 가상 스레드에서 실행한다.
  */
 @Component
@@ -25,14 +27,23 @@ public class LensAnalysisBootstrap {
 
     private final LensAnalysisService lensAnalysisService;
     private final MarketSession marketSession;
+    private final long maxAgeHours;
 
     public LensAnalysisBootstrap(
             LensAnalysisService lensAnalysisService,
             @Value("${lens.analysis.bootstrap-market-session:REGULAR_MARKET}")
-            MarketSession marketSession
+            MarketSession marketSession,
+            @Value("${lens.analysis.bootstrap-max-age-hours:24}")
+            long maxAgeHours
     ) {
+        if (maxAgeHours < 1) {
+            throw new IllegalArgumentException(
+                    "Lens 분석 유효 시간은 1시간 이상이어야 합니다."
+            );
+        }
         this.lensAnalysisService = lensAnalysisService;
         this.marketSession = marketSession;
+        this.maxAgeHours = maxAgeHours;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -43,8 +54,15 @@ public class LensAnalysisBootstrap {
 
     void runIfRequired() {
         try {
-            if (lensAnalysisService.hasCompletedAnalysis()) {
-                log.info("Lens analysis bootstrap skipped. completed batch exists");
+            LocalDateTime completedAtOrAfter = LocalDateTime.now()
+                    .minusHours(maxAgeHours);
+            if (lensAnalysisService.hasRecentCompletedAnalysis(
+                    completedAtOrAfter
+            )) {
+                log.info(
+                        "Lens analysis bootstrap skipped. recent batch exists. completedAtOrAfter={}",
+                        completedAtOrAfter
+                );
                 return;
             }
 

@@ -15,6 +15,11 @@ public interface LensAnalysisBatchRepository
 
     boolean existsByStatus(LensBatchStatus status);
 
+    boolean existsByStatusAndCompletedAtGreaterThanEqual(
+            LensBatchStatus status,
+            LocalDateTime completedAt
+    );
+
     List<LensAnalysisBatch> findAllByStatusAndStartedAtBefore(
             LensBatchStatus status,
             LocalDateTime startedAt

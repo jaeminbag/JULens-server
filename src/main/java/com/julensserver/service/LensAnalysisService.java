@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -111,14 +112,18 @@ public class LensAnalysisService {
         );
     }
 
-    /**
-     * 최초 배포처럼 비어 있는 DB에서 분석 초기화가 필요한지 확인한다.
-     * 완료 배치가 하나라도 있으면 기존 결과와 정기 스케줄을 그대로 사용한다.
-     */
-    public boolean hasCompletedAnalysis() {
-        return lensAnalysisBatchRepository.existsByStatus(
-                LensBatchStatus.COMPLETED
+    public boolean hasRecentCompletedAnalysis(
+            LocalDateTime completedAtOrAfter
+    ) {
+        Objects.requireNonNull(
+                completedAtOrAfter,
+                "최근 분석의 기준 시각은 null일 수 없습니다."
         );
+        return lensAnalysisBatchRepository
+                .existsByStatusAndCompletedAtGreaterThanEqual(
+                        LensBatchStatus.COMPLETED,
+                        completedAtOrAfter
+                );
     }
 
     private List<Stock> resolveMostActiveStocks(List<String> tickers) {
